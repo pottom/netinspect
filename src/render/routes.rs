@@ -67,6 +67,12 @@ struct Widths {
     interface: usize,
 }
 
+/// Measured across **every** route, not per family.
+///
+/// Sizing each block to its own contents puts the ipv4 and ipv6 columns in
+/// different places, and a reader comparing the two tables then has to find
+/// the columns again halfway down the page. One measurement costs the ipv4
+/// block some blank space and buys a single grid.
 fn widths(routes: &[Route], edge: usize) -> Widths {
     let longest = |f: fn(&Route) -> usize, header: usize| {
         routes.iter().map(f).max().unwrap_or(0).max(header) + GAP
@@ -98,6 +104,7 @@ pub fn render(routes: &[Route], summary: &RouteSummary, options: &Options) -> St
     let theme = &options.theme;
     let mut out: Vec<String> = Vec::new();
 
+    let widths = widths(routes, options.edge);
     for family in [Family::Inet, Family::Inet6] {
         let block: Vec<&Route> = routes.iter().filter(|r| r.family == family).collect();
         if block.is_empty() {
@@ -109,8 +116,6 @@ pub fn render(routes: &[Route], summary: &RouteSummary, options: &Options) -> St
         out.push(heading(theme, family, options.edge));
         out.push(String::new());
 
-        let owned: Vec<Route> = block.iter().map(|r| (*r).clone()).collect();
-        let widths = widths(&owned, options.edge);
         out.push(header_row(theme, &widths));
         for route in block {
             out.push(row(theme, route, &widths));
@@ -358,6 +363,56 @@ mod tests {
         let summary = summarise(shown, &all, &interfaces);
         assert_eq!(summary.total, 2);
         assert_eq!(summary.default_gateways, 2);
+    }
+
+    #[test]
+    fn both_families_share_one_grid() {
+        // A reader comparing the two tables must not have to find the columns
+        // again halfway down the page.
+        let mut v4 = route("10.0.0.0/8", &[]);
+        v4.family = Family::Inet;
+        v4.gateway = Some("10.0.0.1".to_owned());
+        v4.interface = Some("en0".to_owned());
+        let mut v6 = route("2001:db8:aaaa:bbbb::/64", &[]);
+        v6.family = Family::Inet6;
+        v6.gateway = Some("fe80::1%en0".to_owned());
+        v6.interface = Some("en0".to_owned());
+
+        let rendered = render(
+            &[v4, v6],
+            &RouteSummary {
+                total: 2,
+                default_gateways: 0,
+                split_tunnel: false,
+            },
+            &Options {
+                theme: Theme::plain(),
+                edge: 96,
+            },
+        );
+
+        let headers: Vec<&str> = rendered
+            .lines()
+            .filter(|line| line.contains("destination"))
+            .collect();
+        assert_eq!(headers.len(), 2, "one header per family");
+        assert_eq!(headers[0], headers[1], "the two grids must be identical");
+
+        // And the rows land on it: the gateway starts at the same column in
+        // both families, which is the thing a reader actually relies on.
+        let column_of = |line: &str, needle: &str| {
+            line.find(needle).map(|byte| line[..byte].chars().count())
+        };
+        let v4_gateway = rendered
+            .lines()
+            .find_map(|line| column_of(line, "10.0.0.1"))
+            .expect("the ipv4 gateway");
+        let v6_gateway = rendered
+            .lines()
+            .find_map(|line| column_of(line, "fe80::1%en0"))
+            .expect("the ipv6 gateway");
+        assert_eq!(v4_gateway, v6_gateway);
+        assert_eq!(Some(v4_gateway), column_of(headers[0], "gateway"));
     }
 
     #[test]
