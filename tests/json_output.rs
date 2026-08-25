@@ -43,7 +43,10 @@ fn json_is_a_single_line_of_valid_json() {
 #[test]
 fn envelope_matches_schema_1() {
     let report = report();
-    assert_eq!(report["schema"], 1, "schema 1 is frozen; see docs/MILESTONES.md");
+    assert_eq!(
+        report["schema"], 1,
+        "schema 1 is frozen; see docs/MILESTONES.md"
+    );
     // A bare semver: the `v` is for the human report, and a script comparing
     // versions should not have to strip it.
     let version = report["version"].as_str().expect("a version");
@@ -62,7 +65,9 @@ fn envelope_matches_schema_1() {
 #[test]
 fn every_interface_has_the_documented_shape() {
     let report = report();
-    let interfaces = report["interfaces"].as_array().expect("interfaces is an array");
+    let interfaces = report["interfaces"]
+        .as_array()
+        .expect("interfaces is an array");
     assert!(!interfaces.is_empty(), "a machine always has at least lo0");
 
     for iface in interfaces {
@@ -154,7 +159,10 @@ fn reachability_reports_every_stage_it_did_not_attempt_as_null() {
             continue; // never attempted, which is not a failure
         }
         assert!(value["ok"].is_boolean(), "{stage}: {value}");
-        assert!(value["ms"].is_u64() || value["ms"].is_null(), "{stage}: {value}");
+        assert!(
+            value["ms"].is_u64() || value["ms"].is_null(),
+            "{stage}: {value}"
+        );
     }
 
     // A captive portal must always name somewhere to go.
@@ -229,7 +237,10 @@ fn a_public_address_is_either_absent_or_coherent() {
 
     // Numbers are numbers.
     for key in ["latitude", "longitude"] {
-        assert!(public[key].is_f64() || public[key].is_null(), "{key}: {public}");
+        assert!(
+            public[key].is_f64() || public[key].is_null(),
+            "{key}: {public}"
+        );
     }
 
     // The tunnel verdict is only stated when there was something to compare
@@ -364,7 +375,10 @@ fn listen_shares_the_envelope_and_never_drops_a_socket() {
         assert!(socket["address"].is_string());
 
         let exposure = socket["exposure"].as_str().expect("an exposure");
-        assert!(["wildcard", "loopback", "interface"].contains(&exposure), "{exposure}");
+        assert!(
+            ["wildcard", "loopback", "interface"].contains(&exposure),
+            "{exposure}"
+        );
 
         // `null` means the owner could not be determined. Consumers must
         // handle it, and it must never be confused with "no process".
@@ -383,11 +397,18 @@ fn listen_shares_the_envelope_and_never_drops_a_socket() {
     let by_exposure = summary["wildcard"].as_u64().unwrap()
         + summary["loopback"].as_u64().unwrap()
         + summary["interface"].as_u64().unwrap();
-    assert_eq!(by_exposure as usize, sockets.len(), "every socket is in a group");
+    assert_eq!(
+        by_exposure as usize,
+        sockets.len(),
+        "every socket is in a group"
+    );
 
     // Never "off" when it is not known.
     let state = report["firewall"]["state"].as_str().expect("a state");
-    assert!(["off", "on", "block_all", "unknown"].contains(&state), "{state}");
+    assert!(
+        ["off", "on", "block_all", "unknown"].contains(&state),
+        "{state}"
+    );
 }
 
 /// The whole reason source A comes first: an unprivileged run must still see
@@ -398,7 +419,10 @@ fn an_unprivileged_run_sees_sockets_it_cannot_attribute() {
     let report: Value = serde_json::from_str(&stdout).unwrap();
     let sockets = report["sockets"].as_array().unwrap();
 
-    assert!(!sockets.is_empty(), "a machine always has something listening");
+    assert!(
+        !sockets.is_empty(),
+        "a machine always has something listening"
+    );
     // On any normal macOS machine some of these belong to root, and this test
     // is not running as root.
     assert!(
@@ -450,5 +474,8 @@ fn pretty_requires_json() {
         .arg("--pretty")
         .output()
         .expect("runnable");
-    assert!(!output.status.success(), "--pretty alone must be a usage error");
+    assert!(
+        !output.status.success(),
+        "--pretty alone must be a usage error"
+    );
 }

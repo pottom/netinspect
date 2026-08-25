@@ -101,16 +101,21 @@ pub fn replace(target: &Path, bytes: &[u8]) -> Result<()> {
     {
         let mut file = std::fs::File::create(&scratch.path)
             .with_context(|| format!("could not write to {}", directory.display()))?;
-        file.write_all(bytes).context("the new binary could not be written")?;
+        file.write_all(bytes)
+            .context("the new binary could not be written")?;
         // Reach the disk before anything is renamed over anything.
-        file.sync_all().context("the new binary could not be flushed")?;
+        file.sync_all()
+            .context("the new binary could not be flushed")?;
     }
 
     std::fs::set_permissions(&scratch.path, std::fs::Permissions::from_mode(0o755))
         .context("the new binary could not be made executable")?;
 
     std::fs::rename(&scratch.path, target).with_context(|| {
-        format!("could not put the new binary in place of {}", target.display())
+        format!(
+            "could not put the new binary in place of {}",
+            target.display()
+        )
     })?;
     // From here the temp file is the target; removing it would undo the update.
     scratch.keep = true;
@@ -150,7 +155,10 @@ mod tests {
         let binary = directory.join("netinspect");
         std::fs::write(&binary, b"old").unwrap();
 
-        assert_eq!(locate(&binary), Installation::Direct(std::fs::canonicalize(&binary).unwrap()));
+        assert_eq!(
+            locate(&binary),
+            Installation::Direct(std::fs::canonicalize(&binary).unwrap())
+        );
 
         // A directory nobody may write to.
         assert!(matches!(
@@ -189,7 +197,10 @@ mod tests {
         let binary = directory.join("netinspect");
         std::fs::write(&binary, b"the old binary").unwrap();
 
-        assert!(replace(&binary, b"").is_err(), "an empty binary must be refused");
+        assert!(
+            replace(&binary, b"").is_err(),
+            "an empty binary must be refused"
+        );
         assert_eq!(std::fs::read(&binary).unwrap(), b"the old binary");
 
         // And a target whose directory does not exist fails without a trace.

@@ -23,7 +23,9 @@ pub fn extract(archive: &[u8], wanted: &str) -> Result<Vec<u8>> {
 
     for entry in tar.entries().context("the archive could not be read")? {
         let mut entry = entry.context("the archive is damaged")?;
-        let path = entry.path().context("an archive entry has no usable name")?;
+        let path = entry
+            .path()
+            .context("an archive entry has no usable name")?;
         let name = path
             .file_name()
             .and_then(|name| name.to_str())
@@ -104,8 +106,7 @@ mod tests {
         assert!(extract(b"", "netinspect").is_err());
         assert!(extract(b"not a gzip stream at all", "netinspect").is_err());
         // A valid gzip stream that is not a tar.
-        let mut encoder =
-            flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
         encoder.write_all(b"just some bytes").unwrap();
         assert!(extract(&encoder.finish().unwrap(), "netinspect").is_err());
     }

@@ -25,11 +25,17 @@ const TIMEOUT: Duration = Duration::from_secs(30);
 /// What happened, so the caller can say it in words rather than a status code.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
-    Updated { from: String, to: String },
+    Updated {
+        from: String,
+        to: String,
+    },
     AlreadyCurrent(String),
     /// A package manager owns this copy. Fighting it over its own files is how
     /// a machine ends up in a state nobody can explain.
-    Managed { path: PathBuf, hint: String },
+    Managed {
+        path: PathBuf,
+        hint: String,
+    },
     /// **Never offer to escalate.** Say where it is and stop.
     NotWritable(PathBuf),
     /// This build has no signing key, so it cannot check what it downloads.
@@ -117,16 +123,27 @@ pub fn run(current_version: &str, force: bool, verbose: bool) -> Result<Outcome>
 }
 
 async fn text(client: &reqwest::Client, url: &str) -> Result<String> {
-    let response = client.get(url).send().await.with_context(|| format!("could not reach {url}"))?;
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .with_context(|| format!("could not reach {url}"))?;
     let status = response.status();
     if !status.is_success() {
         bail!("{url} answered {status}");
     }
-    response.text().await.with_context(|| format!("could not read {url}"))
+    response
+        .text()
+        .await
+        .with_context(|| format!("could not read {url}"))
 }
 
 async fn bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
-    let response = client.get(url).send().await.with_context(|| format!("could not reach {url}"))?;
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .with_context(|| format!("could not reach {url}"))?;
     let status = response.status();
     if !status.is_success() {
         bail!("{url} answered {status}");
@@ -146,7 +163,10 @@ impl Outcome {
             Outcome::Updated { from, to } => format!("updated from v{from} to v{to}"),
             Outcome::AlreadyCurrent(version) => format!("v{version} is the latest release"),
             Outcome::Managed { path, hint } => {
-                format!("{} was installed by a package manager — {hint}", path.display())
+                format!(
+                    "{} was installed by a package manager — {hint}",
+                    path.display()
+                )
             }
             Outcome::NotWritable(path) => {
                 format!("{} is not writable by this user", path.display())

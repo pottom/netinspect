@@ -18,7 +18,7 @@ use sha2::{Digest, Sha256};
 /// Empty in a build that has not been given one. `update` then refuses rather
 /// than skipping the check: an unverified update path is worse than none.
 /// See `docs/RELEASING.md`.
-pub const PUBLIC_KEY: &str = "";
+pub const PUBLIC_KEY: &str = "RWR8d8Kv1w59idBR1l9XvA1Z9+/P3YIw7QTH47qpdrNfwoDo+JE/UPaQ";
 
 pub fn signing_key_configured() -> bool {
     !PUBLIC_KEY.trim().is_empty()
@@ -58,7 +58,7 @@ pub fn verify_signature(public_key: &str, archive: &[u8], signature: &str) -> Re
     if public_key.trim().is_empty() {
         bail!("this build has no release signing key compiled in");
     }
-    let key = minisign_verify::PublicKey::decode(public_key.trim())
+    let key = minisign_verify::PublicKey::from_base64(public_key.trim())
         .context("the compiled-in release signing key is not a minisign key")?;
     let signature = minisign_verify::Signature::decode(signature)
         .context("the release signature could not be read")?;
@@ -119,13 +119,43 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  netinspect-0.4
             .unwrap()
             .to_string();
 
-        assert!(verify_signature(&ours.pk.to_box().unwrap().to_string(), archive, &signature).is_err());
+        assert!(verify_signature(&ours.pk.to_base64(), archive, &signature).is_err());
+    }
+
+    /// The key that ships in this binary has to be one the shipped verifier
+    /// can actually read. A typo here would only surface on someone else's
+    /// machine, halfway through an update.
+    /// End to end with the actual release keypair: a signature made by the
+    /// private key must verify against the one compiled in here. If these two
+    /// ever drift apart, every installed copy stops accepting updates.
+    #[test]
+    fn the_release_keypair_matches_itself() {
+        let Ok(secret) = std::env::var("NETINSPECT_RELEASE_KEY") else {
+            return; // only checkable where the private key is
+        };
+        let text = std::fs::read_to_string(&secret).expect("the private key file");
+        let secret = minisign::SecretKeyBox::from_string(&text)
+            .expect("the private key must parse")
+            .into_unencrypted_secret_key()
+            .expect("the release key is stored unencrypted, for CI");
+        let archive = b"the published bytes".to_vec();
+        let signature = minisign::sign(None, &secret, &archive[..], None, None)
+            .unwrap()
+            .to_string();
+        verify_signature(PUBLIC_KEY, &archive, &signature)
+            .expect("the shipped key must verify what the release key signs");
+    }
+
+    #[test]
+    fn the_compiled_in_key_is_a_key() {
+        assert!(signing_key_configured());
+        minisign_verify::PublicKey::from_base64(PUBLIC_KEY).expect("the release key must decode");
     }
 
     #[test]
     fn the_published_bytes_verify_and_a_changed_byte_does_not() {
         let keys = minisign::KeyPair::generate_unencrypted_keypair().unwrap();
-        let public = keys.pk.to_box().unwrap().to_string();
+        let public = keys.pk.to_base64();
         let archive = b"the published bytes".to_vec();
         let signature = minisign::sign(None, &keys.sk, &archive[..], None, None)
             .unwrap()

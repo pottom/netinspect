@@ -42,7 +42,12 @@ pub struct Cli {
     pub all: bool,
 
     /// Suppress IPv6
-    #[arg(short = '4', long = "ipv4-only", global = true, conflicts_with = "ipv6_only")]
+    #[arg(
+        short = '4',
+        long = "ipv4-only",
+        global = true,
+        conflicts_with = "ipv6_only"
+    )]
     pub ipv4_only: bool,
 
     /// Suppress IPv4
@@ -173,9 +178,7 @@ impl Cli {
     /// Whether this run may tell the provider anything. `check` never does:
     /// it answers from the exit code and has no use for a location.
     pub fn lookup_enabled(&self) -> bool {
-        !self.no_lookup
-            && self.command.is_none()
-            && !crate::public::lookup_disabled()
+        !self.no_lookup && self.command.is_none() && !crate::public::lookup_disabled()
     }
 
     pub fn probe_timeout(&self) -> std::time::Duration {
@@ -289,11 +292,7 @@ impl Cli {
 fn detect_palette() -> Option<Palette> {
     if let Ok(rgb) = termbg::rgb(Duration::from_millis(100)) {
         // termbg reports 16 bits per channel.
-        let (r, g, b) = (
-            (rgb.r >> 8) as u8,
-            (rgb.g >> 8) as u8,
-            (rgb.b >> 8) as u8,
-        );
+        let (r, g, b) = ((rgb.r >> 8) as u8, (rgb.g >> 8) as u8, (rgb.b >> 8) as u8);
         return Some(palette_for_background(r, g, b));
     }
     palette_from_colorfgbg()
@@ -332,9 +331,7 @@ fn palette_for_background(r: u8, g: u8, b: u8) -> Palette {
 
 /// The machine's own IANA zone, when it has a name. A fixed offset does not.
 pub fn system_timezone() -> Option<String> {
-    jiff::tz::TimeZone::system()
-        .iana_name()
-        .map(str::to_owned)
+    jiff::tz::TimeZone::system().iana_name().map(str::to_owned)
 }
 
 fn env_flag(name: &str) -> bool {
@@ -457,7 +454,11 @@ mod tests {
         let cli = Cli::parse_from(["netinspect", "listen", "--tcp", "--port", "5432"]);
         assert!(matches!(
             cli.command,
-            Some(Command::Listen { tcp: true, port: Some(5432), .. })
+            Some(Command::Listen {
+                tcp: true,
+                port: Some(5432),
+                ..
+            })
         ));
         // Both protocols at once is a contradiction, not a default.
         assert!(Cli::try_parse_from(["netinspect", "listen", "--tcp", "--udp"]).is_err());

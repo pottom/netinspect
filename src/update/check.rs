@@ -130,8 +130,11 @@ mod tests {
         store(&directory, &written).unwrap();
         assert_eq!(load(&directory), Some(written));
 
-        std::fs::write(path(&directory), r#"{"schema":9,"checked_at_unix":0,"latest":null}"#)
-            .unwrap();
+        std::fs::write(
+            path(&directory),
+            r#"{"schema":9,"checked_at_unix":0,"latest":null}"#,
+        )
+        .unwrap();
         assert_eq!(load(&directory), None);
 
         std::fs::write(path(&directory), "{ not json").unwrap();

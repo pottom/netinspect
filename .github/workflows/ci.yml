@@ -1,0 +1,69 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+      # The lint that enforces "no subprocess" lives in clippy.toml, so this
+      # is not just style — see AGENTS.md.
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test
+
+      # These are cheap and they catch the regression a code review will not:
+      # a subprocess, a platform conditional outside src/sys/, unsafe above the
+      # platform boundary, or an import creeping into the model.
+      - name: Architectural guards
+        run: cargo test --test guards
+
+      - name: The binary runs and its JSON parses
+        run: |
+          cargo run -- --version
+          cargo run -- --json --no-lookup --no-check | python3 -m json.tool > /dev/null
+          cargo run -- routes --json | python3 -m json.tool > /dev/null
+          cargo run -- listen --json | python3 -m json.tool > /dev/null
+
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: macos-14
+    strategy:
+      matrix:
+        target: [aarch64-apple-darwin, x86_64-apple-darwin]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --target ${{ matrix.target }}
+
+  installer:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: The installer is valid shell
+        run: sh -n install.sh

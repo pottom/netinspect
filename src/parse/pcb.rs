@@ -313,10 +313,7 @@ fn read_inpcb(block: &[u8]) -> Option<Socket> {
         pcb,
         local: address(inpcb::LOCAL_ADDRESS),
         // Ports are in network order on the wire and in this structure.
-        local_port: u16::from_be_bytes([
-            block[inpcb::LOCAL_PORT],
-            block[inpcb::LOCAL_PORT + 1],
-        ]),
+        local_port: u16::from_be_bytes([block[inpcb::LOCAL_PORT], block[inpcb::LOCAL_PORT + 1]]),
         foreign: (!unconnected).then_some(foreign),
         foreign_port: u16::from_be_bytes([
             block[inpcb::FOREIGN_PORT],
@@ -332,8 +329,7 @@ fn read_uid(block: &[u8]) -> Option<u32> {
 }
 
 fn read_tcp_state(block: &[u8]) -> Option<TcpState> {
-    (block.len() >= tcpcb::MINIMUM)
-        .then(|| TcpState::from_raw(word(block, tcpcb::STATE) as i32))
+    (block.len() >= tcpcb::MINIMUM).then(|| TcpState::from_raw(word(block, tcpcb::STATE) as i32))
 }
 
 #[cfg(test)]

@@ -67,7 +67,9 @@ impl Resolver for Net {
         builder.options_mut().timeout = timeout;
         // One shot: retrying inside the resolver would blow the stage budget.
         builder.options_mut().attempts = 1;
-        let resolver = builder.build().map_err(|e| ProbeError::Failed(e.to_string()))?;
+        let resolver = builder
+            .build()
+            .map_err(|e| ProbeError::Failed(e.to_string()))?;
 
         match tokio::time::timeout(timeout, resolver.lookup_ip(name)).await {
             Ok(Ok(lookup)) => Ok(lookup.iter().collect()),

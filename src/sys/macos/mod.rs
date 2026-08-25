@@ -74,5 +74,3 @@ impl Platform for MacOs {
         Ok(wifi::collect(&self.store()?, iface, self.config.helpers))
     }
 }
-
-

@@ -59,9 +59,23 @@ jobs:
             target/x86_64-apple-darwin/release/netinspect
           lipo -info dist/netinspect
 
-      # Without this, Gatekeeper blocks the first launch on any machine that
-      # downloaded the archive through a browser.
+      # Without this, Gatekeeper warns on the first launch on any machine that
+      # downloaded the archive through a browser. `curl` and `brew` installs are
+      # unaffected. The step is skipped when the secrets are absent rather than
+      # failing the release: an unnotarised build is still signed by minisign,
+      # which is the check `netinspect update` actually performs.
+      - name: Is an Apple signing identity configured?
+        id: apple
+        run: |
+          if [ -n "${{ secrets.APPLE_SIGNING_IDENTITY }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No Apple signing identity; this release will not be notarised."
+          fi
+
       - name: Sign, notarize and staple
+        if: steps.apple.outputs.configured == 'true'
         env:
           CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -121,7 +135,7 @@ jobs:
 
           shasum -a 256 ./*.tar.gz | sed 's| \./| |' > SHA256SUMS
 
-          cargo install minisign --locked
+          brew install minisign
           echo "$MINISIGN_SECRET_KEY" > "$RUNNER_TEMP/minisign.key"
           for archive in ./*.tar.gz; do
             minisign -S -s "$RUNNER_TEMP/minisign.key" -m "$archive" \

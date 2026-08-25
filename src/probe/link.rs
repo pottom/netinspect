@@ -29,7 +29,12 @@ pub fn probe(interfaces: &[Interface]) -> bool {
 /// up and the machine can reach nothing — and reporting a link would blame the
 /// gateway stage for something that failed here.
 fn carries_traffic(address: &str) -> bool {
-    let Ok(address) = address.split('%').next().unwrap_or(address).parse::<IpAddr>() else {
+    let Ok(address) = address
+        .split('%')
+        .next()
+        .unwrap_or(address)
+        .parse::<IpAddr>()
+    else {
         return false;
     };
     match address {
@@ -144,6 +149,9 @@ mod tests {
 
     #[test]
     fn no_default_route_means_no_gateway() {
-        assert_eq!(default_gateway(&[interface(InterfaceStatus::Connected)]), None);
+        assert_eq!(
+            default_gateway(&[interface(InterfaceStatus::Connected)]),
+            None
+        );
     }
 }

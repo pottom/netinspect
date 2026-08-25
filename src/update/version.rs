@@ -79,8 +79,22 @@ mod tests {
 
     #[test]
     fn a_leading_v_is_optional() {
-        assert_eq!(Version::parse("v1.2.3").unwrap().0, Version { major: 1, minor: 2, patch: 3 });
-        assert_eq!(Version::parse("1.2.3").unwrap().0, Version { major: 1, minor: 2, patch: 3 });
+        assert_eq!(
+            Version::parse("v1.2.3").unwrap().0,
+            Version {
+                major: 1,
+                minor: 2,
+                patch: 3
+            }
+        );
+        assert_eq!(
+            Version::parse("1.2.3").unwrap().0,
+            Version {
+                major: 1,
+                minor: 2,
+                patch: 3
+            }
+        );
         assert_eq!(Version::parse(" 1.2.3 ").unwrap().0.to_string(), "1.2.3");
     }
 

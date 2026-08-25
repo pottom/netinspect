@@ -10,13 +10,13 @@ use clap::Parser;
 use netinspect::cli::{self, Cli, Command};
 use netinspect::model::{
     DnsConfig, Exposure, Interface, ListenReport, PublicAddress, Reachability, RoutesReport,
-    SocketFilter, Snapshot, SCHEMA,
+    Snapshot, SocketFilter, SCHEMA,
 };
 use netinspect::probe::{self, net::Net, Ladder};
 use netinspect::public::{self, cache};
 use netinspect::render::{human, json, listen as render_listen, routes as render_routes};
-use netinspect::update::{self, check};
 use netinspect::sys;
+use netinspect::update::{self, check};
 
 fn main() -> ExitCode {
     match run() {
@@ -253,7 +253,9 @@ fn latest_release_tag() -> Option<String> {
             .text()
             .await
             .ok()?;
-        update::release::parse(&body).ok().map(|release| release.tag)
+        update::release::parse(&body)
+            .ok()
+            .map(|release| release.tag)
     })
 }
 
@@ -473,9 +475,10 @@ fn measure(
             let net = Arc::clone(&net);
             let endpoint = public::endpoint();
             let timeout = cli.probe_timeout();
-            Some(runtime.spawn(async move {
-                public::lookup(net.as_ref(), &endpoint, timeout).await
-            }))
+            Some(
+                runtime
+                    .spawn(async move { public::lookup(net.as_ref(), &endpoint, timeout).await }),
+            )
         }
         _ => None,
     };
@@ -575,7 +578,11 @@ fn report_line(report: &Reachability) -> String {
             report.gateway.map(|s| s.ok),
             report.gateway.and_then(|s| s.ms)
         ),
-        stage("dns", report.dns.map(|s| s.ok), report.dns.and_then(|s| s.ms)),
+        stage(
+            "dns",
+            report.dns.map(|s| s.ok),
+            report.dns.and_then(|s| s.ms)
+        ),
         stage(
             "http",
             report.http.map(|s| s.ok),

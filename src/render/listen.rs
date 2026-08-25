@@ -248,12 +248,7 @@ fn exposure_role(exposure: Exposure) -> Role {
     }
 }
 
-fn footer(
-    out: &mut Vec<String>,
-    table: &SocketTable,
-    firewall: FirewallState,
-    options: &Options,
-) {
+fn footer(out: &mut Vec<String>, table: &SocketTable, firewall: FirewallState, options: &Options) {
     let theme = &options.theme;
 
     // Never omit a socket for want of a name — say how many there were, and
@@ -400,7 +395,11 @@ mod tests {
                 name: name.to_owned(),
                 pid,
                 uid,
-                user: Some(if uid == 0 { "root".to_owned() } else { "maya".to_owned() }),
+                user: Some(if uid == 0 {
+                    "root".to_owned()
+                } else {
+                    "maya".to_owned()
+                }),
             }),
         }
     }
@@ -437,16 +436,35 @@ mod tests {
     fn the_dangerous_group_comes_first() {
         let rendered = render(
             &table(vec![
-                socket("127.0.0.1", 6379, Exposure::Loopback, Some(("redis", 4021, 501))),
-                socket("0.0.0.0", 5432, Exposure::Wildcard, Some(("postgres", 1284, 501))),
-                socket("192.168.1.24", 8384, Exposure::Interface, Some(("syncthing", 2077, 501))),
+                socket(
+                    "127.0.0.1",
+                    6379,
+                    Exposure::Loopback,
+                    Some(("redis", 4021, 501)),
+                ),
+                socket(
+                    "0.0.0.0",
+                    5432,
+                    Exposure::Wildcard,
+                    Some(("postgres", 1284, 501)),
+                ),
+                socket(
+                    "192.168.1.24",
+                    8384,
+                    Exposure::Interface,
+                    Some(("syncthing", 2077, 501)),
+                ),
             ]),
             firewall(FirewallMode::Unknown),
             &options(),
         );
         let order: Vec<&str> = rendered
             .lines()
-            .filter(|line| line.contains("reachable") || line.contains("bound to") || line.contains("machine only"))
+            .filter(|line| {
+                line.contains("reachable")
+                    || line.contains("bound to")
+                    || line.contains("machine only")
+            })
             .collect();
         assert_eq!(order.len(), 3);
         assert!(order[0].contains("reachable from the network"));
@@ -466,9 +484,15 @@ mod tests {
             firewall(FirewallMode::Unknown),
             &options(),
         );
-        assert!(!rendered.contains("reachable from the network"), "{rendered}");
+        assert!(
+            !rendered.contains("reachable from the network"),
+            "{rendered}"
+        );
         assert!(rendered.contains("this machine only"), "{rendered}");
-        assert!(rendered.contains("1 socket\n") || rendered.contains("1 socket "), "{rendered}");
+        assert!(
+            rendered.contains("1 socket\n") || rendered.contains("1 socket "),
+            "{rendered}"
+        );
     }
 
     /// An unattributed open port is still an open port.
@@ -481,7 +505,10 @@ mod tests {
         );
         assert!(rendered.contains(":631"), "{rendered}");
         assert!(rendered.contains('—'), "{rendered}");
-        assert!(rendered.contains("1 socket owned by other users"), "{rendered}");
+        assert!(
+            rendered.contains("1 socket owned by other users"),
+            "{rendered}"
+        );
         assert!(rendered.contains("sudo netinspect listen"), "{rendered}");
     }
 
@@ -490,7 +517,12 @@ mod tests {
         let rendered = render(
             &table(vec![
                 socket("0.0.0.0", 22, Exposure::Wildcard, Some(("sshd", 1, 0))),
-                socket("0.0.0.0", 3000, Exposure::Wildcard, Some(("node", 8830, 501))),
+                socket(
+                    "0.0.0.0",
+                    3000,
+                    Exposure::Wildcard,
+                    Some(("node", 8830, 501)),
+                ),
             ]),
             firewall(FirewallMode::Unknown),
             &options(),
@@ -514,12 +546,20 @@ mod tests {
     #[test]
     fn the_firewall_footer_hedges_and_disappears_when_unknown() {
         let sockets = table(vec![
-            socket("0.0.0.0", 5432, Exposure::Wildcard, Some(("postgres", 1284, 501))),
+            socket(
+                "0.0.0.0",
+                5432,
+                Exposure::Wildcard,
+                Some(("postgres", 1284, 501)),
+            ),
             socket("0.0.0.0", 22, Exposure::Wildcard, Some(("sshd", 1, 0))),
         ]);
 
         let off = render(&sockets, firewall(FirewallMode::Off), &options());
-        assert!(off.contains("the 2 exposed ports accept connections"), "{off}");
+        assert!(
+            off.contains("the 2 exposed ports accept connections"),
+            "{off}"
+        );
 
         // The macOS firewall filters by application, not by port. This must
         // never be tightened into a claim that a port is closed.
@@ -546,14 +586,26 @@ mod tests {
         assert_eq!(service_name(49152, Protocol::Tcp), None);
 
         let sockets = table(vec![
-            socket("0.0.0.0", 5432, Exposure::Wildcard, Some(("postgres", 1284, 501))),
-            socket("0.0.0.0", 49152, Exposure::Wildcard, Some(("something", 2, 501))),
+            socket(
+                "0.0.0.0",
+                5432,
+                Exposure::Wildcard,
+                Some(("postgres", 1284, 501)),
+            ),
+            socket(
+                "0.0.0.0",
+                49152,
+                Exposure::Wildcard,
+                Some(("something", 2, 501)),
+            ),
         ]);
         let mut with = options();
         with.resolve = true;
         let resolved = render(&sockets, firewall(FirewallMode::Unknown), &with);
         assert!(resolved.contains("postgresql"));
-        assert!(!render(&sockets, firewall(FirewallMode::Unknown), &options()).contains("postgresql"));
+        assert!(
+            !render(&sockets, firewall(FirewallMode::Unknown), &options()).contains("postgresql")
+        );
 
         // The name lives in the address column, so it must be measured with
         // it — otherwise it runs straight into the process name.
@@ -567,7 +619,11 @@ mod tests {
 
     #[test]
     fn nothing_listening_says_so() {
-        let rendered = render(&table(Vec::new()), firewall(FirewallMode::Unknown), &options());
+        let rendered = render(
+            &table(Vec::new()),
+            firewall(FirewallMode::Unknown),
+            &options(),
+        );
         assert!(rendered.contains("nothing is listening"), "{rendered}");
     }
 }

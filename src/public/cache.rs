@@ -158,14 +158,18 @@ mod tests {
 
         // And with no previous one, a tunnelled observation must not become
         // the baseline the leak check compares against.
-        assert_eq!(baseline_after(None, &observation("AS9009"), true, 200), None);
+        assert_eq!(
+            baseline_after(None, &observation("AS9009"), true, 200),
+            None
+        );
     }
 
     #[test]
     fn a_round_trip_keeps_the_answer_and_the_file_private() {
         use std::os::unix::fs::PermissionsExt;
 
-        let directory = std::env::temp_dir().join(format!("netinspect-cache-{}", std::process::id()));
+        let directory =
+            std::env::temp_dir().join(format!("netinspect-cache-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&directory);
 
         let mut written = cache("en0@192.168.1.1|", 4242);
@@ -179,12 +183,18 @@ mod tests {
         assert_eq!(load(&directory).as_ref(), Some(&written));
 
         // It records where this machine is; nobody else on the box needs it.
-        let mode = std::fs::metadata(directory.join(FILE)).unwrap().permissions().mode();
+        let mode = std::fs::metadata(directory.join(FILE))
+            .unwrap()
+            .permissions()
+            .mode();
         assert_eq!(mode & 0o777, 0o600, "geo.json is {:o}", mode & 0o777);
 
         // Writing again over an existing file must not relax it.
         store(&directory, &written).unwrap();
-        let mode = std::fs::metadata(directory.join(FILE)).unwrap().permissions().mode();
+        let mode = std::fs::metadata(directory.join(FILE))
+            .unwrap()
+            .permissions()
+            .mode();
         assert_eq!(mode & 0o777, 0o600);
 
         std::fs::remove_dir_all(&directory).ok();

@@ -102,7 +102,11 @@ fn build(
     raw: Raw,
 ) -> Interface {
     let service = services::for_device(services, &name);
-    let kind = classify(&name, raw.flags, service.and_then(|s| s.hardware.as_deref()));
+    let kind = classify(
+        &name,
+        raw.flags,
+        service.and_then(|s| s.hardware.as_deref()),
+    );
     let link_active = link_active(store, &name);
     let has_address = !raw.ipv4.is_empty() || !raw.ipv6.is_empty();
     let has_routable = raw.ipv4.iter().any(|(a, _)| !a.is_link_local())
@@ -137,7 +141,8 @@ fn build(
         })
         .collect();
 
-    let is_default_route = primary.v4.as_deref() == Some(&name) || primary.v6.as_deref() == Some(&name);
+    let is_default_route =
+        primary.v4.as_deref() == Some(&name) || primary.v6.as_deref() == Some(&name);
     let gateway = if primary.v4.as_deref() == Some(&name) {
         primary.router_v4.clone()
     } else if primary.v6.as_deref() == Some(&name) {
@@ -357,10 +362,16 @@ mod tests {
     #[test]
     fn classifies_by_name_before_hardware() {
         // bridge0 is configured as Ethernet hardware but is a bridge.
-        assert_eq!(classify("bridge0", UP, Some("Ethernet")), InterfaceKind::Bridge);
+        assert_eq!(
+            classify("bridge0", UP, Some("Ethernet")),
+            InterfaceKind::Bridge
+        );
         assert_eq!(classify("utun3", UP, None), InterfaceKind::Vpn);
         assert_eq!(classify("en0", UP, Some("AirPort")), InterfaceKind::Wifi);
-        assert_eq!(classify("en5", UP, Some("Ethernet")), InterfaceKind::Ethernet);
+        assert_eq!(
+            classify("en5", UP, Some("Ethernet")),
+            InterfaceKind::Ethernet
+        );
         // No service and no recognisable prefix: honestly "other".
         assert_eq!(classify("awdl0", UP, None), InterfaceKind::Other);
         assert_eq!(
@@ -398,7 +409,13 @@ mod tests {
             InterfaceStatus::Inactive
         );
         assert_eq!(
-            status_of(InterfaceKind::Wifi, InterfaceFlags::empty(), Some(true), true, true),
+            status_of(
+                InterfaceKind::Wifi,
+                InterfaceFlags::empty(),
+                Some(true),
+                true,
+                true
+            ),
             InterfaceStatus::Disabled
         );
     }

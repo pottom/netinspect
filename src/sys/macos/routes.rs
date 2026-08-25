@@ -261,7 +261,10 @@ mod tests {
     #[test]
     fn flag_letters_follow_the_documented_order() {
         // up | gateway | static | protocol-cloning | global
-        assert_eq!(flag_letters(0x1 | 0x2 | 0x800 | 0x10000 | 0x40000000), "UGScg");
+        assert_eq!(
+            flag_letters(0x1 | 0x2 | 0x800 | 0x10000 | 0x40000000),
+            "UGScg"
+        );
         // up | static | protocol-cloning
         assert_eq!(flag_letters(0x1 | 0x800 | 0x10000), "USc");
         // up | host | link
@@ -293,7 +296,6 @@ mod tests {
             "a4:83:e7:2d:11:9c"
         );
     }
-
 }
 
 /// Capture fixtures for `parse::rt_msg`.
@@ -317,10 +319,9 @@ mod capture {
     /// Deterministic, so a re-capture of an unchanged table produces an
     /// unchanged fixture.
     fn scramble(seed: &[u8]) -> u16 {
-        seed.iter()
-            .fold(0x811cu16, |hash, byte| {
-                (hash ^ u16::from(*byte)).wrapping_mul(0x0193)
-            })
+        seed.iter().fold(0x811cu16, |hash, byte| {
+            (hash ^ u16::from(*byte)).wrapping_mul(0x0193)
+        })
     }
 
     fn sanitise_address(sockaddr: &mut [u8]) {

@@ -18,28 +18,16 @@ fn run(args: &[&str]) -> (Option<i32>, String, String) {
     )
 }
 
-/// A build with no signing key cannot check what it downloads, so it must not
-/// download anything. Failing closed is the whole design.
+/// `update` reaches the network, so it is not run here — the refusals that
+/// matter are unit-tested in `update::verify` and `update`. What is checked
+/// here is that the command exists and describes itself.
 #[test]
-fn a_build_without_a_signing_key_refuses_to_update() {
-    let (code, stdout, _) = run(&["update"]);
-    assert_eq!(code, Some(1), "nothing was installed, and it said so");
-    assert!(
-        stdout.contains("signing key"),
-        "the refusal must say why: {stdout}"
-    );
-    assert!(stdout.contains("RELEASING"), "and where to look: {stdout}");
-}
-
-/// Suggesting `sudo` is how a read-only diagnostic tool talks somebody into
-/// running it as root.
-#[test]
-fn no_update_message_offers_to_escalate() {
-    for args in [&["update"][..], &["update", "--force"][..]] {
-        let (_, stdout, stderr) = run(args);
-        assert!(!stdout.contains("sudo"), "{stdout}");
-        assert!(!stderr.contains("sudo"), "{stderr}");
-    }
+fn update_is_offered_and_explains_itself() {
+    let (code, stdout, stderr) = run(&["update", "--help"]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(stdout.contains("--force"), "{stdout}");
+    // Nothing in this program ever suggests running it as root.
+    assert!(!stdout.contains("sudo"), "{stdout}");
 }
 
 #[test]
@@ -75,7 +63,12 @@ fn the_completions_cover_the_whole_command_surface() {
 fn the_version_flag_agrees_with_the_report_header() {
     let (code, stdout, _) = run(&["--version"]);
     assert_eq!(code, Some(0));
-    assert!(stdout.trim().ends_with(concat!("v", env!("CARGO_PKG_VERSION"))), "{stdout}");
+    assert!(
+        stdout
+            .trim()
+            .ends_with(concat!("v", env!("CARGO_PKG_VERSION"))),
+        "{stdout}"
+    );
 }
 
 /// The update check writes its own cache file and never touches the geo one.

@@ -26,7 +26,8 @@ fn inpcb_v4(local: [u8; 4], local_port: u16, foreign: [u8; 4], foreign_port: u16
     bytes[inpcb::PCB..inpcb::PCB + 8].copy_from_slice(&handle.to_ne_bytes());
     bytes[inpcb::VFLAG] = inpcb::INP_IPV4;
     bytes[inpcb::LOCAL_PORT..inpcb::LOCAL_PORT + 2].copy_from_slice(&local_port.to_be_bytes());
-    bytes[inpcb::FOREIGN_PORT..inpcb::FOREIGN_PORT + 2].copy_from_slice(&foreign_port.to_be_bytes());
+    bytes[inpcb::FOREIGN_PORT..inpcb::FOREIGN_PORT + 2]
+        .copy_from_slice(&foreign_port.to_be_bytes());
     let at = inpcb::LOCAL_ADDRESS + inpcb::V4_IN_V6_OFFSET;
     bytes[at..at + 4].copy_from_slice(&local);
     let at = inpcb::FOREIGN_ADDRESS + inpcb::V4_IN_V6_OFFSET;
@@ -150,7 +151,11 @@ fn a_dual_stack_socket_is_read_as_ipv6() {
 #[test]
 fn several_sockets_are_split_at_each_new_pcb() {
     let bytes = buffer(vec![
-        vec![inpcb_v4([0, 0, 0, 0], 22, [0, 0, 0, 0], 0), xsocket(0), xtcpcb(1)],
+        vec![
+            inpcb_v4([0, 0, 0, 0], 22, [0, 0, 0, 0], 0),
+            xsocket(0),
+            xtcpcb(1),
+        ],
         vec![
             inpcb_v4([127, 0, 0, 1], 6379, [0, 0, 0, 0], 0),
             xsocket(501),
@@ -189,7 +194,11 @@ fn blocks_are_padded_to_an_eight_byte_boundary() {
         vec![inpcb_v4([0, 0, 0, 0], 631, [0, 0, 0, 0], 0), xtcpcb(1)],
     ]);
     let sockets = walk(&bytes).unwrap();
-    assert_eq!(sockets.len(), 2, "the walk stopped at the first padded block");
+    assert_eq!(
+        sockets.len(),
+        2,
+        "the walk stopped at the first padded block"
+    );
     assert_eq!(sockets[1].local_port, 631);
 }
 

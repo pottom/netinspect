@@ -50,16 +50,14 @@ fn every_record_carries_a_destination() {
 #[test]
 fn the_families_are_the_ones_that_were_asked_for() {
     let v4 = walk(&fixture("routes-inet.bin")).unwrap();
-    assert!(v4.iter().all(|route| !matches!(
-        route.destination,
-        Some(SocketAddress::V6 { .. })
-    )));
+    assert!(v4
+        .iter()
+        .all(|route| !matches!(route.destination, Some(SocketAddress::V6 { .. }))));
 
     let v6 = walk(&fixture("routes-inet6.bin")).unwrap();
-    assert!(v6.iter().all(|route| !matches!(
-        route.destination,
-        Some(SocketAddress::V4(_))
-    )));
+    assert!(v6
+        .iter()
+        .all(|route| !matches!(route.destination, Some(SocketAddress::V4(_)))));
 
     // And the combined dump is the sum of the two.
     assert_eq!(
@@ -131,7 +129,6 @@ fn a_corrupted_real_buffer_never_panics() {
         let _ = walk(&buffer);
     }
 }
-
 
 // -------------------------------------------------------------------------
 // The socket table

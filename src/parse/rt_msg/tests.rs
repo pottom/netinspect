@@ -154,10 +154,7 @@ fn an_ipv6_route_loses_its_embedded_scope() {
     address[3] = 12;
     address[15] = 1;
 
-    let record = finish(
-        header(RTF_UP, 0x1, 12, 0),
-        &[sockaddr_in6(address, 12)],
-    );
+    let record = finish(header(RTF_UP, 0x1, 12, 0), &[sockaddr_in6(address, 12)]);
     let routes = walk(&record).unwrap();
     assert_eq!(
         routes[0].destination,
@@ -192,7 +189,10 @@ fn a_record_from_an_unknown_version_is_skipped_not_rejected() {
     let mut alien = finish(header(RTF_UP, 0x1, 9, 0), &[sockaddr_in([10, 0, 0, 0])]);
     alien[2] = 99;
     buffer.extend(alien);
-    buffer.extend(finish(header(RTF_UP, 0x1, 3, 0), &[sockaddr_in([10, 1, 0, 0])]));
+    buffer.extend(finish(
+        header(RTF_UP, 0x1, 3, 0),
+        &[sockaddr_in([10, 1, 0, 0])],
+    ));
 
     let routes = walk(&buffer).unwrap();
     assert_eq!(routes.len(), 2);

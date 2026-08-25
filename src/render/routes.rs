@@ -95,7 +95,10 @@ fn widths(routes: &[Route], edge: usize) -> Widths {
     if total > available {
         // Take it out of the gateway, never the destination.
         let over = total - available;
-        widths.gateway = widths.gateway.saturating_sub(over).max("gateway".len() + GAP);
+        widths.gateway = widths
+            .gateway
+            .saturating_sub(over)
+            .max("gateway".len() + GAP);
     }
     widths
 }
@@ -225,7 +228,11 @@ fn truncate(text: &str, room: usize, theme: &Theme) -> String {
     if text.chars().count() <= room || room == 0 {
         return text.to_owned();
     }
-    let ellipsis = if theme.glyphs.rule == "-" { "..." } else { "…" };
+    let ellipsis = if theme.glyphs.rule == "-" {
+        "..."
+    } else {
+        "…"
+    };
     let keep = room.saturating_sub(ellipsis.chars().count());
     text.chars().take(keep).chain(ellipsis.chars()).collect()
 }
@@ -233,7 +240,11 @@ fn truncate(text: &str, room: usize, theme: &Theme) -> String {
 fn footer(theme: &Theme, summary: &RouteSummary) -> String {
     let mut line = Line::new();
     line.pad_to(RAIL_COL);
-    let count = if summary.total == 1 { "route" } else { "routes" };
+    let count = if summary.total == 1 {
+        "route"
+    } else {
+        "routes"
+    };
     line.push(theme, Role::Bright, &format!("{} {count}", summary.total));
 
     let mut notes: Vec<String> = Vec::new();
@@ -278,7 +289,10 @@ mod tests {
     fn the_kernels_own_bookkeeping_is_hidden_by_default() {
         assert!(is_interesting(&route("192.168.1.0/24", &["up"])));
         // Cloned for a host this machine has spoken to.
-        assert!(!is_interesting(&route("192.168.1.42", &["up", "was-cloned"])));
+        assert!(!is_interesting(&route(
+            "192.168.1.42",
+            &["up", "was-cloned"]
+        )));
         assert!(!is_interesting(&route("224.0.0.0/4", &["up", "multicast"])));
         // Every interface has one of these and none of them is news.
         assert!(!is_interesting(&route("fe80::/64", &["up"])));
@@ -347,7 +361,10 @@ mod tests {
         let mut idle = interface("utun9", InterfaceKind::Vpn);
         idle.status = crate::model::InterfaceStatus::Inactive;
         let interfaces = [interface("en0", InterfaceKind::Wifi), idle];
-        let all = [on("default", "en0", true), on("10.9.0.0/16", "utun9", false)];
+        let all = [
+            on("default", "en0", true),
+            on("10.9.0.0/16", "utun9", false),
+        ];
         assert!(!summarise(&all, &all, &interfaces).split_tunnel);
     }
 
@@ -400,9 +417,8 @@ mod tests {
 
         // And the rows land on it: the gateway starts at the same column in
         // both families, which is the thing a reader actually relies on.
-        let column_of = |line: &str, needle: &str| {
-            line.find(needle).map(|byte| line[..byte].chars().count())
-        };
+        let column_of =
+            |line: &str, needle: &str| line.find(needle).map(|byte| line[..byte].chars().count());
         let v4_gateway = rendered
             .lines()
             .find_map(|line| column_of(line, "10.0.0.1"))

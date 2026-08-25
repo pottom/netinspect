@@ -52,7 +52,10 @@ fn the_frame_is_redrawn_in_place_and_the_cursor_comes_back() {
     let (code, text) = watch_then_interrupt(&["--watch", "1", "--no-lookup", "--no-color"], 3);
 
     assert_eq!(code, Some(0), "an interrupted watch is not a failure");
-    assert!(text.starts_with(HIDE_CURSOR), "the cursor was left blinking");
+    assert!(
+        text.starts_with(HIDE_CURSOR),
+        "the cursor was left blinking"
+    );
     assert!(
         text.trim_end().ends_with(SHOW_CURSOR),
         "the terminal was not given back: {:?}",

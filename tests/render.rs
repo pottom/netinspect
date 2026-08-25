@@ -297,7 +297,10 @@ fn a_working_tunnel_says_so_on_the_same_row() {
         ..public_address()
     });
     let rendered = human::render(&snapshot, &options(100));
-    let row = rendered.lines().find(|l| l.contains("84.21.7.113")).unwrap();
+    let row = rendered
+        .lines()
+        .find(|l| l.contains("84.21.7.113"))
+        .unwrap();
     assert!(row.contains("via VPN"), "{row:?}");
 }
 
@@ -308,7 +311,10 @@ fn without_a_baseline_the_address_row_carries_no_verdict() {
     let mut snapshot = full();
     snapshot.public = Some(public_address());
     let rendered = human::render(&snapshot, &options(100));
-    let row = rendered.lines().find(|l| l.contains("84.21.7.113")).unwrap();
+    let row = rendered
+        .lines()
+        .find(|l| l.contains("84.21.7.113"))
+        .unwrap();
     assert!(!row.contains("VPN"), "{row:?}");
 }
 
@@ -321,7 +327,10 @@ fn a_timezone_mismatch_names_the_system_clock() {
         ..public_address()
     });
     let rendered = human::render(&snapshot, &options(100));
-    assert!(rendered.contains("system clock is Europe/Budapest"), "{rendered}");
+    assert!(
+        rendered.contains("system clock is Europe/Budapest"),
+        "{rendered}"
+    );
 }
 
 /// A provider that stops returning a field must not take the section down with
@@ -367,7 +376,10 @@ fn packed_section_titles_share_a_line() {
     // And the row above them is blank, not a title pushed a line high.
     let index = rendered.lines().position(|l| l == titles).unwrap();
     assert!(
-        rendered.lines().nth(index - 1).is_some_and(|l| l.trim().is_empty()),
+        rendered
+            .lines()
+            .nth(index - 1)
+            .is_some_and(|l| l.trim().is_empty()),
         "{rendered}"
     );
 }
@@ -582,11 +594,14 @@ fn extra_width_is_spent_on_unstacking_not_on_padding() {
 
     // DNS and REACHABILITY share a row rather than stacking.
     assert!(
-        wide.lines().any(|l| l.contains("DNS") && l.contains("REACHABILITY")),
+        wide.lines()
+            .any(|l| l.contains("DNS") && l.contains("REACHABILITY")),
         "{wide}"
     );
     assert!(
-        !narrow.lines().any(|l| l.contains("DNS") && l.contains("REACHABILITY")),
+        !narrow
+            .lines()
+            .any(|l| l.contains("DNS") && l.contains("REACHABILITY")),
         "{narrow}"
     );
 }
@@ -639,8 +654,14 @@ fn addresses_are_coloured_by_reach_alone() {
     };
     let rendered = human::render(&full(), &coloured);
     let lan = "\x1b[38;2;69;187;160m";
-    assert!(rendered.contains(&format!("{lan}192.168.1.1\x1b[0m")), "gateway");
-    assert!(rendered.contains(&format!("{lan}192.168.1.24\x1b[0m")), "address");
+    assert!(
+        rendered.contains(&format!("{lan}192.168.1.1\x1b[0m")),
+        "gateway"
+    );
+    assert!(
+        rendered.contains(&format!("{lan}192.168.1.24\x1b[0m")),
+        "address"
+    );
 }
 
 /// The signal bars are a measurement, not a status. Green is reserved for a
@@ -656,8 +677,14 @@ fn signal_bars_are_never_green() {
     let rendered = human::render(&full(), &coloured);
     let ok = "\x1b[38;2;140;201;111m";
     let bright = "\x1b[38;2;242;240;233m";
-    assert!(rendered.contains(&format!("{bright}▇▇▇▇▇")), "bars are bright");
-    assert!(!rendered.contains(&format!("{ok}▇")), "bars must not be ok-green");
+    assert!(
+        rendered.contains(&format!("{bright}▇▇▇▇▇")),
+        "bars are bright"
+    );
+    assert!(
+        !rendered.contains(&format!("{ok}▇")),
+        "bars must not be ok-green"
+    );
 }
 
 /// Absent optional data is omitted, never printed as "unknown".

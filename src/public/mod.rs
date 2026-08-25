@@ -89,7 +89,10 @@ pub async fn lookup(
     endpoint: &str,
     timeout: Duration,
 ) -> Option<Observation> {
-    let reply = client.get(&format!("{endpoint}/json"), timeout).await.ok()?;
+    let reply = client
+        .get(&format!("{endpoint}/json"), timeout)
+        .await
+        .ok()?;
     match reply.status {
         200 => parse_json(&reply.body),
         429 => {
@@ -154,9 +157,8 @@ fn split_org(org: Option<&str>) -> (Option<String>, Option<String>) {
     let Some((head, rest)) = org.split_once(' ') else {
         return (None, Some(org.to_owned()));
     };
-    let looks_like_asn = head.len() > 2
-        && head.starts_with("AS")
-        && head[2..].chars().all(|c| c.is_ascii_digit());
+    let looks_like_asn =
+        head.len() > 2 && head.starts_with("AS") && head[2..].chars().all(|c| c.is_ascii_digit());
     if looks_like_asn {
         (Some(head.to_owned()), Some(rest.trim().to_owned()))
     } else {
@@ -246,7 +248,7 @@ fn via_vpn(vpn_active: bool, asn: Option<&str>, baseline: Option<&Baseline>) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{InterfaceStatus, Ipv4Entry, AddressSource};
+    use crate::model::{AddressSource, InterfaceStatus, Ipv4Entry};
 
     const IPINFO: &str = r#"{
         "ip": "84.21.7.113",
@@ -315,18 +317,27 @@ mod tests {
 
     #[test]
     fn a_tunnel_that_changes_the_network_is_carrying_the_traffic() {
-        assert_eq!(via_vpn(true, Some("AS9009"), Some(&baseline("AS5483"))), Some(true));
+        assert_eq!(
+            via_vpn(true, Some("AS9009"), Some(&baseline("AS5483"))),
+            Some(true)
+        );
     }
 
     #[test]
     fn the_same_network_with_a_tunnel_up_is_a_leak() {
-        assert_eq!(via_vpn(true, Some("AS5483"), Some(&baseline("AS5483"))), Some(false));
+        assert_eq!(
+            via_vpn(true, Some("AS5483"), Some(&baseline("AS5483"))),
+            Some(false)
+        );
     }
 
     #[test]
     fn without_evidence_the_question_goes_unanswered() {
         // No tunnel: nothing to ask.
-        assert_eq!(via_vpn(false, Some("AS5483"), Some(&baseline("AS5483"))), None);
+        assert_eq!(
+            via_vpn(false, Some("AS5483"), Some(&baseline("AS5483"))),
+            None
+        );
         // Never seen this machine without a tunnel: nothing to compare to.
         assert_eq!(via_vpn(true, Some("AS9009"), None), None);
         // The provider did not say which network.
@@ -356,7 +367,13 @@ mod tests {
 
     #[test]
     fn an_address_lands_in_the_field_for_its_family() {
-        let v4 = assemble(&Observation::address_only("1.2.3.4".to_owned()), None, None, false, None);
+        let v4 = assemble(
+            &Observation::address_only("1.2.3.4".to_owned()),
+            None,
+            None,
+            false,
+            None,
+        );
         assert_eq!(v4.ipv4.as_deref(), Some("1.2.3.4"));
         assert!(v4.ipv6.is_none());
 
@@ -403,11 +420,17 @@ mod tests {
         let base = fingerprint(std::slice::from_ref(&wifi));
 
         // A tunnel coming up is a different route out, whatever the clock says.
-        let with_vpn = fingerprint(&[wifi.clone(), interface("utun4", InterfaceKind::Vpn, true, false)]);
+        let with_vpn = fingerprint(&[
+            wifi.clone(),
+            interface("utun4", InterfaceKind::Vpn, true, false),
+        ]);
         assert_ne!(base, with_vpn);
 
         // An idle tunnel is not.
-        let idle = fingerprint(&[wifi.clone(), interface("utun9", InterfaceKind::Vpn, false, false)]);
+        let idle = fingerprint(&[
+            wifi.clone(),
+            interface("utun9", InterfaceKind::Vpn, false, false),
+        ]);
         assert_eq!(base, idle);
 
         // A different gateway on the same interface is a different network.

@@ -25,7 +25,7 @@ use libproc::libproc::proc_pid;
 use libproc::processes::{pids_by_type, ProcFilter};
 
 use crate::model::{
-    Exposure, Family, Protocol, ProcessInfo, SocketEntry, SocketFilter, SocketSummary, SocketTable,
+    Exposure, Family, ProcessInfo, Protocol, SocketEntry, SocketFilter, SocketSummary, SocketTable,
 };
 use crate::parse::pcb::{self, Socket};
 
@@ -145,12 +145,14 @@ fn owners() -> HashMap<u64, ProcessInfo> {
             ) {
                 continue;
             }
-            owners.entry(info.psi.soi_pcb).or_insert_with(|| ProcessInfo {
-                name: name.clone(),
-                pid,
-                uid: 0,
-                user: None,
-            });
+            owners
+                .entry(info.psi.soi_pcb)
+                .or_insert_with(|| ProcessInfo {
+                    name: name.clone(),
+                    pid,
+                    uid: 0,
+                    user: None,
+                });
         }
     }
     owners
@@ -283,7 +285,10 @@ mod tests {
         assert_eq!(exposure(&"::".parse().unwrap()), Exposure::Wildcard);
         assert_eq!(exposure(&"127.0.0.1".parse().unwrap()), Exposure::Loopback);
         assert_eq!(exposure(&"::1".parse().unwrap()), Exposure::Loopback);
-        assert_eq!(exposure(&"192.168.1.24".parse().unwrap()), Exposure::Interface);
+        assert_eq!(
+            exposure(&"192.168.1.24".parse().unwrap()),
+            Exposure::Interface
+        );
         assert_eq!(exposure(&"fe80::1".parse().unwrap()), Exposure::Interface);
     }
 
@@ -335,7 +340,13 @@ mod tests {
         // The uid comes from source A, so it is right even though the owners
         // map carried a placeholder.
         assert_eq!(named.process.as_ref().unwrap().uid, 501);
-        assert!(table.sockets.iter().find(|s| s.port == 22).unwrap().process.is_none());
+        assert!(table
+            .sockets
+            .iter()
+            .find(|s| s.port == 22)
+            .unwrap()
+            .process
+            .is_none());
     }
 
     #[test]

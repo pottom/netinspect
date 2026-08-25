@@ -1,76 +1,112 @@
 # netinspect
 
-Read-only network diagnostics for macOS, in one binary.
+Read-only network diagnostics for macOS, in one binary. It tells you what your
+network is, whether the internet is actually reachable, and — when it is not —
+which of the four ways it broke.
+
+```
+curl -fsSL https://raw.githubusercontent.com/pottom/netinspect/main/install.sh | sh
+```
+
+That script verifies the release against its published checksum before
+unpacking anything, and against its minisign signature too if you have
+`minisign` installed. It is short on purpose: read it first.
+
+Or with Homebrew:
+
+```
+brew install pottom/netinspect/netinspect
+```
+
+---
 
 ```
 $ netinspect
-  netinspect v0.1.0                              21:05:58 CEST
-  ────────────────────────────────────────────────────────────
+  netinspect v0.1.0                                              21:05:58 CEST
+  ────────────────────────────────────────────────────────────────────────────
 
-  ▌ Wi-Fi en0                                        connected
-  │ network     Nyuszilak                        ▇▇▇▇▇ −30 dBm
-  │             Wi-Fi 5 · 866 Mb/s · via scan cache
-  │ ipv4        192.168.1.110/24                          dhcp
-  │ ipv6        fe80::1841:c0c3:c03b:e16d
-  │ gateway     192.168.1.1
-  ╵ hardware    1a:18:dc:a0:08:9f                     mtu 1500
+  ▌ Wi-Fi en0                                                       connected
+  │ network     Kekesteto                     ▇▇▇▇▁ −56 dBm · Wi-Fi 5 · 468 Mb/s
+  │             via scan cache
+  │ ipv4        192.168.2.179/24                                          dhcp
+  │ ipv6        fe80::2029:19c1:bdb1:4773
+  │ gateway     192.168.2.3
+  ╵ hardware    0d:ff:ff:63:ef:b6                                     mtu 1500
 
-  ▌ VPN utun4                                               up
-  ╵ ipv4        10.4.3.90/32
+  ▌ VPN utun4                                                              up
+  ╵ ipv4        10.5.4.75/32
 
-  ╵ Ethernet Adapter (en5) en5                        no cable
+  ╵ Ethernet Adapter (en5) en5                                       no cable
 
-  DNS
-    servers     10.4.60.100   10.4.60.50
-    search      groupit.local
-    proxy       none
-    split-dns   2 scoped resolvers
+  DNS                                       REACHABILITY
+    servers     10.9.60.100   10.9.60.50      link ✓ ── gateway ✓ ── dns ✓ ── http ✓
+    search      example.lan                             4 ms         13 ms    49 ms
+    proxy       none                          online      no captive portal, nothing filtered
 ```
 
 `--json` emits the same data in a stable, versioned schema.
 
-## Where the traffic goes
+## Reading the colour
+
+One idea carries the whole tool: **hue encodes reach — how far away a thing can
+be touched from.** Nothing else gets a hue.
+
+| | |
+|---|---|
+| blue | only this machine can reach it — `127.0.0.1`, `::1` |
+| teal | this network can reach it — `192.168.…`, `10.…`, `fe80::` |
+| amber | the open internet is involved — public addresses, `0.0.0.0` |
+
+Green and red mean a probe answered or did not. They never mean "good value" or
+"big number", which is why the signal bars are white. Violet marks the one thing
+on a line you can copy and run. Everything else — names, MACs, MTUs, flags — is
+a neutral, and its emphasis comes from weight, not colour.
+
+Amber is not a warning. Amber on a public address is neutral information; amber
+on `firewall: off` is alarming. The colour is the same because the fact is the
+same; the severity is in the word next to it.
+
+The full rules are in [`docs/DESIGN.md`](docs/DESIGN.md).
+
+## Terminals
+
+Four palettes, each contrast-checked against its own background: `dark`,
+`dark-warm`, `light` and `light-warm`. netinspect asks the terminal what colour
+it is painted (OSC 11), falls back to `COLORFGBG`, then to dark. `--theme` or
+`NETINSPECT_THEME` overrides.
+
+On a 256-colour terminal the palette maps to committed index tables rather than
+being rounded at runtime. On an 8-colour terminal the reach triple survives as
+blue / cyan / yellow — that is why those three hues were chosen over three
+bespoke ones. With `--no-color` it survives as structure: status words go in
+brackets, runnable lines take a `$` prefix, and separators appear where colour
+was doing the separating.
+
+The report follows the terminal between 62 and 96 columns, spending the extra
+width on structure rather than padding: rows that had to stack stop stacking,
+and short sections pair up. Below 66 columns it stacks; below 40 it drops the
+rail.
+
+## Is it actually online
 
 ```
-$ netinspect routes
-  ipv4 ──────────────────────────────────────────────────────────
-
-     destination         gateway            iface      flags
-     default             192.168.1.1        en0        UGScg
-     10.4.0.0/22         10.4.0.51          utun4      UGSc
-     192.168.1.0/24      link#12            en0        UCS
-
-  101 routes   8 default gateways · split tunnel active
+$ netinspect check && echo yes
 ```
 
-Read from the kernel with `sysctl(3)`, not by parsing `netstat` — its columns
-move between releases and it truncates long IPv6 addresses. Column widths are
-measured from the data; when the table will not fit, the gateway column gives
-way first and a destination never does.
+`check` prints nothing and answers through its exit code: `0` online, `10` link
+down, `11` gateway unreachable, `12` dns failure, `13` captive portal. It exists
+for shell prompts and scripts.
 
-By default it hides what the kernel keeps for itself: entries it cloned for
-hosts this machine has spoken to, multicast, and the link-local prefix every
-interface carries. `--all` shows them — on the machine this was built on, the
-difference is 101 rows against 218.
+The four stages run in order and stop at the first failure, so the blame lands
+on the thing that actually broke. A stage that was never attempted is drawn as a
+dim dot, not a red cross — it is a different fact, and reporting it as a failure
+would be a lie. The whole ladder is bounded at 2.5 seconds regardless of how
+slow the network is.
 
-The footer names two conditions worth noticing: more than one default gateway,
-and a tunnel that carries some routes but not the default one.
-
-## Watching it change
-
-```
-$ netinspect --watch          # every 2 seconds
-$ netinspect -w 10            # or a cadence of your choosing
-```
-
-The frame is redrawn in place, so the report stays where it is instead of
-scrolling past. Ctrl-C gives the terminal back and leaves the last frame on
-screen.
-
-The public address is **not** looked up again on every tick — only when the
-route out changes, which is what the fingerprint in the cache is for. Asking a
-provider every two seconds where this machine is would be both rude and
-pointless, so the heading says how old the answer on screen is instead.
+Only two hosts are ever contacted, both over plain HTTP: Apple's captive portal
+endpoint that macOS already queries by itself, and one unrelated name. If both
+resolve to the same address, something is intercepting every query — which the
+report says before the HTTP stage confirms it.
 
 ## What is listening
 
@@ -101,64 +137,45 @@ finds eleven listeners `lsof` cannot see without `sudo`.
 Groups run most exposed first, because the dangerous one must never be below
 the fold.
 
-## Is it actually online
+## Where the traffic goes
 
 ```
-$ netinspect check && echo yes
+$ netinspect routes
+  ipv4 ──────────────────────────────────────────────────────────
+
+     destination         gateway            iface      flags
+     default             192.168.1.1        en0        UGScg
+     10.4.0.0/22         10.4.0.51          utun4      UGSc
+     192.168.1.0/24      link#12            en0        UCS
+
+  101 routes   8 default gateways · split tunnel active
 ```
 
-`check` prints nothing and answers through its exit code: `0` online, `10` link
-down, `11` gateway unreachable, `12` dns failure, `13` captive portal. It exists
-for shell prompts and scripts.
+Read from the kernel with `sysctl(3)`, not by parsing `netstat` — its columns
+move between releases and it truncates long IPv6 addresses. Column widths are
+measured from the data; when the table will not fit, the gateway column gives
+way first and a destination never does.
 
-The four stages run in order and stop at the first failure, so the blame lands
-on the thing that actually broke. A stage that was never attempted is drawn as a
-dim dot, not a red cross — it is a different fact, and reporting it as a failure
-would be a lie. The whole ladder is bounded at 2.5 seconds regardless of how
-slow the network is.
+By default it hides what the kernel keeps for itself: entries it cloned for
+hosts this machine has spoken to, multicast, and the link-local prefix every
+interface carries. `--all` shows them — on the machine this was built on, the
+difference is 101 rows against 218.
 
-Only two hosts are ever contacted, both over plain HTTP: Apple's captive portal
-endpoint that macOS already queries by itself, and one unrelated name. If both
-resolve to the same address, something is intercepting every query — which the
-report says before the HTTP stage confirms it.
+## Watching it change
 
-## Reading the colour
+```
+$ netinspect --watch          # every 2 seconds
+$ netinspect -w 10
+```
 
-One idea carries the whole tool: **hue encodes reach — how far away a thing can
-be touched from.** Nothing else gets a hue.
+The frame is redrawn in place, so the report stays where it is instead of
+scrolling past. Ctrl-C gives the terminal back and leaves the last frame on
+screen.
 
-| | |
-|---|---|
-| blue | only this machine can reach it — `127.0.0.1`, `::1` |
-| teal | this network can reach it — `192.168.…`, `10.…`, `fe80::` |
-| amber | the open internet is involved — public addresses, `0.0.0.0` |
-
-Green and red mean a probe answered or did not. They never mean "good value" or
-"big number", which is why the signal bars are white. Violet marks the one thing
-on a line you can copy and run. Everything else — names, MACs, MTUs, flags — is
-a neutral, and its emphasis comes from weight, not colour.
-
-Amber is not a warning. Amber on a public address is neutral information; amber
-on `firewall: off` is alarming. The colour is the same because the fact is the
-same; the severity is in the word next to it.
-
-The full rules are in [`docs/DESIGN.md`](docs/DESIGN.md).
-
-## Terminals
-
-Four palettes, each tuned and contrast-checked against its own background:
-`dark`, `dark-warm`, `light` and `light-warm`. netinspect asks the terminal what
-colour it is painted (OSC 11), falls back to `COLORFGBG`, then to dark.
-`--theme` or `NETINSPECT_THEME` overrides.
-
-On a 256-colour terminal the palette maps to committed index tables rather than
-being rounded at runtime. On an 8-colour terminal the reach triple survives as
-blue / cyan / yellow — that is why those three hues were chosen over three
-bespoke ones. With `--no-color` it survives as structure: status words go in
-brackets, runnable lines take a `$` prefix, and separators appear where colour
-was doing the separating.
-
-Below 66 columns the layout stacks; below 40 it drops the rail.
+The public address is **not** looked up again on every tick — only when the
+route out changes. Asking a provider every two seconds where this machine is
+would be both rude and pointless, so the heading says how old the answer on
+screen is instead.
 
 ## What it does not do
 
@@ -214,10 +231,6 @@ only then puts anything next to the running one. Every failure returns before
 the original is touched, and the replacement is a rename within one filesystem
 so there is no moment where the binary is half-written.
 
-A build without a signing key refuses to update at all rather than skipping the
-check — an update path that cannot verify what it downloads is worse than none.
-See [`docs/RELEASING.md`](docs/RELEASING.md).
-
 If Homebrew installed it, `update` says `brew upgrade netinspect` instead of
 fighting a package manager over its own files. If the path is not writable it
 says so and stops; it will not offer to escalate.
@@ -244,9 +257,6 @@ with no tunnel up, which the cache keeps. Until it has one, the row says
 nothing. A guess here would either raise a false alarm or quietly reassure
 someone whose traffic is leaking.
 
-`--no-lookup` does **not** disable the update check; that is
-`NETINSPECT_NO_UPDATE_CHECK=1`.
-
 Nothing else leaves the machine. No telemetry, no crash reporting. The geo cache
 is written with mode `0600`.
 
@@ -258,7 +268,18 @@ the machine.
 
 ```
 cargo build --release
+cargo test
+cargo clippy --all-targets -- -D warnings
 ```
 
-macOS 13+ on arm64 or x86_64. See `AGENTS.md` for the rules the codebase holds
-itself to, and `docs/MILESTONES.md` for what is built so far.
+macOS 13+ on arm64 or x86_64.
+
+Three rules are enforced by tests rather than by review: the program does not
+shell out, platform code stays inside `src/sys/`, and the model depends on
+nothing but `serde`. See [`AGENTS.md`](AGENTS.md) for the rules the codebase
+holds itself to, [`docs/DESIGN.md`](docs/DESIGN.md) for the output design, and
+[`docs/RELEASING.md`](docs/RELEASING.md) for how a release is cut.
+
+## Licence
+
+MIT.

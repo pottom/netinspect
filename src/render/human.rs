@@ -67,8 +67,6 @@ impl Options {
         self.edge.unwrap_or_else(|| content_edge(self.width))
     }
 
-
-
     /// Columns available to a value starting at the value column.
     fn value_room(&self) -> usize {
         self.edge().saturating_sub(VALUE_COL - 1)
@@ -404,7 +402,10 @@ fn network_row(wifi: &WifiDetail, options: &Options) -> Row {
                 (Role::Bright, theme.glyphs.bar_full.repeat(bars as usize)),
                 (
                     Role::Rule,
-                    theme.glyphs.bar_empty.repeat(5usize.saturating_sub(bars as usize)),
+                    theme
+                        .glyphs
+                        .bar_empty
+                        .repeat(5usize.saturating_sub(bars as usize)),
                 ),
                 (
                     Role::Faint,
@@ -512,9 +513,12 @@ fn emit_row(out: &mut Vec<String>, options: &Options, row: &Row, rail: Rail) {
         }
         out.push(line.finish());
 
-        for extra in [row.annotation.as_deref().map(flatten), row.continuation.clone()]
-            .into_iter()
-            .flatten()
+        for extra in [
+            row.annotation.as_deref().map(flatten),
+            row.continuation.clone(),
+        ]
+        .into_iter()
+        .flatten()
         {
             let mut line = Line::new();
             push_rail(&mut line, options, rail);
@@ -910,8 +914,7 @@ fn reachability_section(out: &mut Vec<String>, report: &Reachability, options: &
     emit_row(
         out,
         options,
-        &Row::new(word, vec![(Role::Faint, explanation(report).to_owned())])
-            .with_label_role(role),
+        &Row::new(word, vec![(Role::Faint, explanation(report).to_owned())]).with_label_role(role),
         Rail::None,
     );
 
@@ -1177,6 +1180,9 @@ mod tests {
             is_default_route: false,
         };
         assert_eq!(source_note(AddressSource::Manual, &iface), None);
-        assert_eq!(source_note(AddressSource::Dhcp, &iface).as_deref(), Some("dhcp"));
+        assert_eq!(
+            source_note(AddressSource::Dhcp, &iface).as_deref(),
+            Some("dhcp")
+        );
     }
 }

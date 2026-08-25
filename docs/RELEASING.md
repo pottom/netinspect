@@ -18,7 +18,7 @@ downloads is worse than none at all — so it fails closed rather than skipping
 the check.
 
 ```
-cargo install minisign --locked
+brew install minisign
 minisign -G -p netinspect.pub -s netinspect.key
 ```
 

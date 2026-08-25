@@ -96,7 +96,10 @@ fn radio_detail(iface: &str) -> Option<RadioDetail> {
         let rate = interface.transmitRate();
 
         Some(RadioDetail {
-            ssid: interface.ssid().map(|s| s.to_string()).filter(|s| !s.is_empty()),
+            ssid: interface
+                .ssid()
+                .map(|s| s.to_string())
+                .filter(|s| !s.is_empty()),
             // Zero means "not associated", not "0 dBm".
             rssi_dbm: (rssi != 0).then_some(rssi as i32),
             phy_mode: phy_mode_name(interface.activePHYMode()),
@@ -117,4 +120,3 @@ fn phy_mode_name(mode: CWPHYMode) -> Option<String> {
     };
     Some(name.to_owned())
 }
-

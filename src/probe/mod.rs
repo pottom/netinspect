@@ -120,7 +120,10 @@ impl Ladder<'_> {
         let Some(gateway) = link::default_gateway(interfaces) else {
             // No default route: nothing downstream can be attributed, so say
             // that rather than blaming DNS for it.
-            report.gateway = Some(Stage { ok: false, ms: None });
+            report.gateway = Some(Stage {
+                ok: false,
+                ms: None,
+            });
             report.state = ReachabilityState::GatewayUnreachable;
             return report;
         };
@@ -182,7 +185,9 @@ impl Ladder<'_> {
             status: reply.as_ref().ok().map(|r| r.status),
         });
         report.state = verdict.state;
-        report.captive_portal = verdict.login_url.map(|login_url| CaptivePortal { login_url });
+        report.captive_portal = verdict
+            .login_url
+            .map(|login_url| CaptivePortal { login_url });
         report
     }
 }
@@ -227,9 +232,7 @@ pub mod mock;
 mod tests {
     use super::mock::MockNetwork;
     use super::*;
-    use crate::model::{
-        AddressSource, InterfaceKind, InterfaceStatus, Ipv4Entry,
-    };
+    use crate::model::{AddressSource, InterfaceKind, InterfaceStatus, Ipv4Entry};
 
     fn dns() -> DnsConfig {
         DnsConfig {

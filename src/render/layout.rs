@@ -145,7 +145,13 @@ impl Line {
 
     /// Right-align `text` so that it ends at `column`, leaving at least one
     /// space after whatever is already on the line.
-    pub fn push_right(&mut self, theme: &Theme, role: Role, text: &str, column: usize) -> &mut Self {
+    pub fn push_right(
+        &mut self,
+        theme: &Theme,
+        role: Role,
+        text: &str,
+        column: usize,
+    ) -> &mut Self {
         let len = text.chars().count();
         self.pad_to(column.saturating_sub(len) + 1);
         self.push(theme, role, text)
@@ -303,7 +309,11 @@ mod tests {
 
     #[test]
     fn a_taller_right_block_still_lands_in_its_column() {
-        let composed = columns(vec!["  A".to_owned()], vec!["  X".to_owned(), "  Y".to_owned()], 11);
+        let composed = columns(
+            vec!["  A".to_owned()],
+            vec!["  X".to_owned(), "  Y".to_owned()],
+            11,
+        );
         assert_eq!(composed[0], "  A         X");
         assert_eq!(composed[1], "            Y");
     }

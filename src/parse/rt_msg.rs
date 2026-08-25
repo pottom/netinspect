@@ -121,7 +121,9 @@ pub fn walk(buffer: &[u8]) -> Result<Vec<RouteMessage>, ParseError> {
 }
 
 fn parse(record: &[u8]) -> Result<RouteMessage, ParseError> {
-    let word = |at: usize| u32::from_ne_bytes([record[at], record[at + 1], record[at + 2], record[at + 3]]);
+    let word = |at: usize| {
+        u32::from_ne_bytes([record[at], record[at + 1], record[at + 2], record[at + 3]])
+    };
 
     let mut message = RouteMessage {
         interface_index: u16::from_ne_bytes([record[4], record[5]]),
@@ -266,7 +268,11 @@ pub fn prefix_len(mask: &SocketAddress, ipv6: bool) -> u8 {
         // A fully formed address in the mask slot: count it directly.
         SocketAddress::V4(address) => return address.to_bits().count_ones() as u8,
         SocketAddress::V6 { address, .. } => {
-            return address.segments().iter().map(|s| s.count_ones() as u8).sum()
+            return address
+                .segments()
+                .iter()
+                .map(|s| s.count_ones() as u8)
+                .sum()
         }
         _ => return 0,
     };

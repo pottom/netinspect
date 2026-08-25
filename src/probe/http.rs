@@ -20,10 +20,7 @@ pub struct Verdict {
     pub login_url: Option<String>,
 }
 
-pub fn classify(
-    reply: Result<&HttpReply, &ProbeError>,
-    every_name_one_address: bool,
-) -> Verdict {
+pub fn classify(reply: Result<&HttpReply, &ProbeError>, every_name_one_address: bool) -> Verdict {
     // The resolver already gave it away: every name answering with one address
     // is interception, whatever comes back over HTTP.
     let hijacked_dns = every_name_one_address;
