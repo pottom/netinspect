@@ -1,6 +1,6 @@
 [package]
 name = "netinspect"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.85"
 description = "Read-only network diagnostics for macOS: configuration, reachability, public address"
@@ -31,7 +31,11 @@ flate2 = "1"
 libc = "0.2"
 jiff = "0.2"
 minisign-verify = "0.2"
-reqwest = { version = "0.13", default-features = false, features = ["rustls", "webpki-roots", "charset", "http2"] }
+# rustls' default crypto provider is aws-lc-rs, a large bundled C library.
+# `ring` does the same job here — two TLS clients talking to two hosts — for a
+# fraction of the size. HTTP/1.1 is enough for both of them.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "webpki-roots", "charset"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 sha2 = "0.11"
 supports-color = "3"
 tar = "0.4"

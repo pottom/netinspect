@@ -63,6 +63,7 @@ pub fn run(current_version: &str, force: bool, verbose: bool) -> Result<Outcome>
         return Ok(Outcome::Unverifiable);
     }
 
+    crate::install_crypto_provider();
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;

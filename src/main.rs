@@ -232,6 +232,7 @@ fn refresh_update_check(cli: &Cli) {
 }
 
 fn latest_release_tag() -> Option<String> {
+    netinspect::install_crypto_provider();
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

@@ -18,6 +18,7 @@ pub struct Net {
 
 impl Net {
     pub fn new() -> Result<Self, ProbeError> {
+        crate::install_crypto_provider();
         let client = reqwest::Client::builder()
             // A redirect is the answer, not something to follow.
             .redirect(reqwest::redirect::Policy::none())
