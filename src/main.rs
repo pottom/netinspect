@@ -1,5 +1,8 @@
+use std::io::Write;
 use std::process::ExitCode;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use clap::Parser;
@@ -59,44 +62,144 @@ fn run() -> Result<ExitCode> {
         );
     }
 
-    let measured = if cli.probes_enabled() {
-        Some(measure(&cli, &interfaces, &dns)?)
-    } else {
-        None
-    };
-
     if matches!(cli.command, Some(Command::Check)) {
+        let measured = cli
+            .probes_enabled()
+            .then(|| measure(&cli, &interfaces, &dns, false))
+            .transpose()?;
         return Ok(check(&cli, measured.as_ref().map(|m| &m.0)));
     }
 
-    let (reachability, public) = match measured {
-        Some((reachability, public)) => (Some(reachability), public),
-        None => (None, None),
-    };
+    if let Some(interval) = cli.watch_interval() {
+        return watch(&cli, platform.as_ref(), interval);
+    }
 
-    let snapshot = Snapshot {
-        schema: SCHEMA,
-        version: env!("CARGO_PKG_VERSION").to_owned(),
-        timestamp: now(),
-        interfaces,
-        dns,
-        reachability,
-        public,
-        update: None,
-    };
-
-    let text = if cli.json {
-        json::emit(&snapshot, cli.pretty)?
-    } else {
-        human::render(&snapshot, &cli.render_options(clock()))
-            .trim_end()
-            .to_owned()
-    };
+    let mut carried = Carried::default();
+    let text = frame(&cli, &interfaces, &dns, &mut carried)?;
     println!("{text}");
 
     // The default command succeeded at its job of reporting, whatever the
     // network turned out to be doing. Only `check` encodes connectivity.
     Ok(ExitCode::SUCCESS)
+}
+
+/// What survives from one frame to the next.
+#[derive(Default)]
+struct Carried {
+    /// What the public address was valid for: the route out.
+    fingerprint: Option<String>,
+    public: Option<PublicAddress>,
+    fetched_at_unix: i64,
+}
+
+/// One rendered report.
+///
+/// The public address is not looked up again every tick — only when the route
+/// out has changed. Asking a provider every two seconds where this machine is
+/// would be both rude and pointless.
+fn frame(
+    cli: &Cli,
+    interfaces: &[Interface],
+    dns: &DnsConfig,
+    carried: &mut Carried,
+) -> Result<String> {
+    let fingerprint = public::fingerprint(interfaces);
+    let route_changed = carried.fingerprint.as_deref() != Some(fingerprint.as_str());
+
+    let measured = if cli.probes_enabled() {
+        Some(measure(cli, interfaces, dns, route_changed)?)
+    } else {
+        None
+    };
+    let (reachability, fetched) = match measured {
+        Some((reachability, public)) => (Some(reachability), public),
+        None => (None, None),
+    };
+
+    let now_unix = jiff::Timestamp::now().as_second();
+    if let Some(public) = fetched {
+        carried.public = Some(public);
+        carried.fetched_at_unix = now_unix;
+    }
+    carried.fingerprint = Some(fingerprint);
+
+    let age = carried.public.as_ref().and_then(|_| {
+        let seconds = now_unix.saturating_sub(carried.fetched_at_unix);
+        // Nothing to say about an address measured for this very frame.
+        (seconds >= 1).then(|| format!("{} ago", human::duration(seconds as u64)))
+    });
+
+    let snapshot = Snapshot {
+        schema: SCHEMA,
+        version: env!("CARGO_PKG_VERSION").to_owned(),
+        timestamp: now(),
+        interfaces: interfaces.to_vec(),
+        dns: dns.clone(),
+        reachability,
+        public: carried.public.clone(),
+        update: None,
+    };
+
+    if cli.json {
+        return json::emit(&snapshot, cli.pretty);
+    }
+    let mut options = cli.render_options(clock());
+    options.public_age = age;
+    Ok(human::render(&snapshot, &options).trim_end().to_owned())
+}
+
+/// Redraw the frame in place until interrupted.
+///
+/// Home and clear-to-end rather than the alternate screen: the last frame stays
+/// on the terminal after Ctrl-C, which is what a monitoring command is usually
+/// wanted for.
+fn watch(cli: &Cli, platform: &dyn sys::Platform, interval: Duration) -> Result<ExitCode> {
+    let interrupted = sys::interrupt_flag();
+    let mut out = std::io::stdout();
+    // The cursor would otherwise sit blinking in the middle of the report.
+    write!(out, "\x1b[?25l")?;
+
+    let mut carried = Carried::default();
+    let result = loop {
+        let interfaces = match platform.interfaces() {
+            Ok(interfaces) => interfaces,
+            Err(error) => break Err(error),
+        };
+        let dns = match platform.dns_config() {
+            Ok(dns) => dns,
+            Err(error) => break Err(error),
+        };
+        let text = match frame(cli, &interfaces, &dns, &mut carried) {
+            Ok(text) => text,
+            Err(error) => break Err(error),
+        };
+
+        if let Err(error) = write!(out, "\x1b[H\x1b[J{text}").and_then(|()| out.flush()) {
+            break Err(error.into());
+        }
+        if !wait(interval, interrupted) {
+            break Ok(());
+        }
+    };
+
+    // Whatever happened, give the terminal back.
+    let _ = writeln!(out, "\x1b[?25h");
+    let _ = out.flush();
+    result.map(|()| ExitCode::SUCCESS)
+}
+
+/// Sleep in slices so Ctrl-C is answered promptly rather than after the whole
+/// interval. Returns false when the user has asked to stop.
+fn wait(interval: Duration, interrupted: &std::sync::atomic::AtomicBool) -> bool {
+    const SLICE: Duration = Duration::from_millis(50);
+    let deadline = Instant::now() + interval;
+    while Instant::now() < deadline {
+        if interrupted.load(Ordering::SeqCst) {
+            return false;
+        }
+        std::thread::sleep(SLICE.min(deadline.saturating_duration_since(Instant::now())));
+    }
+    !interrupted.load(Ordering::SeqCst)
 }
 
 fn routes(
@@ -224,6 +327,7 @@ fn measure(
     cli: &Cli,
     interfaces: &[Interface],
     dns: &DnsConfig,
+    lookup: bool,
 ) -> Result<(Reachability, Option<PublicAddress>)> {
     let net = Arc::new(Net::new()?);
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -237,13 +341,14 @@ fn measure(
     let now_unix = jiff::Timestamp::now().as_second();
 
     // A fresh cached answer means this run tells the provider nothing at all.
+    let may_look_up = lookup && cli.lookup_enabled();
     let cached = stored
         .as_ref()
-        .filter(|cache| cli.lookup_enabled() && cache::is_fresh(cache, &fingerprint, now_unix));
+        .filter(|cache| may_look_up && cache::is_fresh(cache, &fingerprint, now_unix));
     if cli.verbose {
         eprintln!(
             "netinspect: geo cache {}",
-            match (&cached, cli.lookup_enabled()) {
+            match (&cached, may_look_up) {
                 (Some(cache), _) => format!("hit, {}s old", now_unix - cache.fetched_at_unix),
                 (None, true) => "miss".to_owned(),
                 (None, false) => "not consulted, lookup disabled".to_owned(),
@@ -251,7 +356,7 @@ fn measure(
         );
     }
 
-    let pending = match (cli.lookup_enabled(), cached.is_some()) {
+    let pending = match (may_look_up, cached.is_some()) {
         (true, false) => {
             let net = Arc::clone(&net);
             let endpoint = public::endpoint();

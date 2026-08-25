@@ -7,6 +7,8 @@
 //!
 //! See `src/sys/AGENTS.md` for the contract.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use anyhow::Result;
 
 use crate::model::{
@@ -63,6 +65,32 @@ pub trait Platform {
 pub fn current_uid() -> u32 {
     // Safety: getuid cannot fail and touches no memory we own.
     unsafe { libc::getuid() }
+}
+
+/// A flag that becomes true when the user interrupts the process.
+///
+/// Watch mode hides the cursor and paints over the screen, so it has to get
+/// control back on Ctrl-C rather than dying with the terminal in that state.
+/// The handler does the one thing that is safe to do inside a signal: set a
+/// flag the loop already checks.
+pub fn interrupt_flag() -> &'static AtomicBool {
+    static INTERRUPTED: AtomicBool = AtomicBool::new(false);
+
+    extern "C" fn handle(_signal: libc::c_int) {
+        INTERRUPTED.store(true, Ordering::SeqCst);
+    }
+
+    // Go through a function pointer rather than casting the item straight to
+    // an integer: the cast is what the ABI needs, but doing it in one step
+    // hides whether the pointer is the right shape.
+    let handler = handle as extern "C" fn(libc::c_int);
+    // Safety: installing a handler whose only action is an atomic store, which
+    // is async-signal-safe. Replacing whatever was there is the intent.
+    unsafe {
+        libc::signal(libc::SIGINT, handler as libc::sighandler_t);
+        libc::signal(libc::SIGTERM, handler as libc::sighandler_t);
+    }
+    &INTERRUPTED
 }
 
 /// Select the backend for this target. Called once at startup.

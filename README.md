@@ -56,6 +56,22 @@ difference is 101 rows against 218.
 The footer names two conditions worth noticing: more than one default gateway,
 and a tunnel that carries some routes but not the default one.
 
+## Watching it change
+
+```
+$ netinspect --watch          # every 2 seconds
+$ netinspect -w 10            # or a cadence of your choosing
+```
+
+The frame is redrawn in place, so the report stays where it is instead of
+scrolling past. Ctrl-C gives the terminal back and leaves the last frame on
+screen.
+
+The public address is **not** looked up again on every tick — only when the
+route out changes, which is what the fingerprint in the cache is for. Asking a
+provider every two seconds where this machine is would be both rude and
+pointless, so the heading says how old the answer on screen is instead.
+
 ## What is listening
 
 ```

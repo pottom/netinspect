@@ -36,6 +36,9 @@ pub struct Options {
     /// The machine's own IANA time zone, for the comparison against where the
     /// public address says it is.
     pub system_timezone: Option<String>,
+    /// How old the public address is, for watch mode. `None` means it was
+    /// measured for this frame.
+    pub public_age: Option<String>,
     /// Force the content edge, for rendering a block into one of two columns.
     /// `None` derives it from `width`, which is what every caller outside the
     /// renderer wants.
@@ -666,7 +669,8 @@ fn wifi_generation(phy_mode: &str) -> String {
     }
 }
 
-fn duration(seconds: u64) -> String {
+/// A duration in the shortest form that still says what it means.
+pub fn duration(seconds: u64) -> String {
     match seconds {
         s if s < 60 => format!("{s}s"),
         s if s < 3600 => format!("{}m", s / 60),
@@ -758,8 +762,21 @@ fn pack(blocks: Vec<Vec<String>>, edge: usize) -> Vec<String> {
 // ---------------------------------------------------------------------------
 
 fn public_section(out: &mut Vec<String>, public: &PublicAddress, options: &Options) {
+    let theme = &options.theme;
     out.push(String::new());
-    out.push(section(&options.theme, "public address"));
+    // In watch mode the address is not re-fetched every tick, so the heading
+    // says how old it is rather than letting it look freshly measured.
+    match &options.public_age {
+        Some(age) => {
+            let mut line = Line::new();
+            line.pad_to(RAIL_COL);
+            line.push(theme, Role::Dim, "PUBLIC ADDRESS");
+            line.space(2);
+            line.push(theme, Role::Faint, age);
+            out.push(line.finish());
+        }
+        None => out.push(section(theme, "public address")),
+    }
 
     for (label, address) in [("ipv4", &public.ipv4), ("ipv6", &public.ipv6)] {
         let Some(address) = address else { continue };

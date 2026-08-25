@@ -129,11 +129,21 @@ the shapes a capture could not supply.
 - [x] Output compared against `lsof` row for row: a strict superset, with
       eleven root-owned listeners `lsof` cannot see unprivileged
 
-## M7 — `--watch`
+## M7 — `--watch` ✅
 
-- [ ] Redraw in place; re-run local collection and the ladder each tick
-- [ ] Re-run the public lookup only on a fingerprint change; show cache age
-- [ ] Restore the cursor on SIGINT
+- [x] Redraw in place with home and clear-to-end; local collection and the
+      reachability ladder re-run every tick
+- [x] The public address is looked up only when the route out changes, and the
+      heading says how old the one on screen is
+- [x] The cursor is hidden while watching and restored on the way out, whatever
+      the way out was; an interrupt is answered inside 50 ms rather than at the
+      end of the interval
+- [x] An interrupted watch exits 0 — it did what was asked
+
+The specification mentions the alternate screen; this uses home and
+clear-to-end instead, which is the escape sequence it also names. The last
+frame then stays on the terminal after Ctrl-C, which is what a monitoring
+command is usually wanted for.
 
 ## M8 — Self-update and the release pipeline
 

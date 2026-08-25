@@ -330,6 +330,11 @@ right-alignment, no rules. Below 40: the same, and drop the rail.
 
 ---
 
+> **Implementation note — watch mode.** The report is redrawn with home and
+> clear-to-end rather than on the alternate screen, so the last frame survives
+> the exit. The `PUBLIC ADDRESS` heading carries the age of the address on
+> screen — it is not re-fetched every tick, only when the route out changes.
+
 ## 7. Copywriting
 
 - Lowercase labels, always. Uppercase only for section titles and acronyms

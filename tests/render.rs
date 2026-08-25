@@ -18,6 +18,7 @@ fn options(width: usize) -> Options {
         ipv6_only: false,
         only_interface: None,
         system_timezone: Some("Europe/Budapest".to_owned()),
+        public_age: None,
         edge: None,
     }
 }
@@ -369,6 +370,27 @@ fn packed_section_titles_share_a_line() {
         rendered.lines().nth(index - 1).is_some_and(|l| l.trim().is_empty()),
         "{rendered}"
     );
+}
+
+/// Watch mode does not re-fetch the address every tick, so the heading has to
+/// say how old the one on screen is.
+#[test]
+fn a_carried_public_address_says_its_age() {
+    let mut snapshot = full();
+    snapshot.public = Some(public_address());
+
+    let fresh = human::render(&snapshot, &options(100));
+    assert!(fresh.contains("PUBLIC ADDRESS"), "{fresh}");
+    assert!(!fresh.contains("ago"), "{fresh}");
+
+    let mut aged = options(100);
+    aged.public_age = Some("3m ago".to_owned());
+    let rendered = human::render(&snapshot, &aged);
+    let heading = rendered
+        .lines()
+        .find(|line| line.contains("PUBLIC ADDRESS"))
+        .expect("the heading");
+    assert!(heading.contains("3m ago"), "{heading:?}");
 }
 
 #[test]

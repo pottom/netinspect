@@ -70,6 +70,11 @@ pub struct Cli {
           value_parser = ["dark", "dark-warm", "light", "light-warm"])]
     pub theme: Option<String>,
 
+    /// Redraw every SECS seconds until interrupted
+    #[arg(short = 'w', long, value_name = "SECS", num_args = 0..=1,
+          default_missing_value = "2", conflicts_with = "json")]
+    pub watch: Option<u64>,
+
     /// Skip the public-address lookup. No outbound request for geo
     #[arg(long, global = true)]
     pub no_lookup: bool,
@@ -131,6 +136,13 @@ impl Cli {
             Some(Command::Routes { .. }) | Some(Command::Listen { .. }) => false,
             None => !self.no_check,
         }
+    }
+
+    /// How often to redraw, once clamped to something a terminal can keep up
+    /// with and a network can answer inside.
+    pub fn watch_interval(&self) -> Option<std::time::Duration> {
+        self.watch
+            .map(|seconds| Duration::from_secs(seconds.clamp(1, 3600)))
     }
 
     /// Which address family the routing table is asked for.
@@ -232,6 +244,7 @@ impl Cli {
             ipv6_only: self.ipv6_only,
             only_interface: self.interface.clone(),
             system_timezone: system_timezone(),
+            public_age: None,
             edge: None,
         }
     }
@@ -381,6 +394,27 @@ mod tests {
             Cli::parse_from(["netinspect", "en0"]).interface.as_deref(),
             Some("en0")
         );
+    }
+
+    #[test]
+    fn watch_takes_an_optional_interval() {
+        assert_eq!(Cli::parse_from(["netinspect"]).watch_interval(), None);
+        // The bare flag means the default cadence.
+        assert_eq!(
+            Cli::parse_from(["netinspect", "-w"]).watch_interval(),
+            Some(Duration::from_secs(2))
+        );
+        assert_eq!(
+            Cli::parse_from(["netinspect", "--watch", "10"]).watch_interval(),
+            Some(Duration::from_secs(10))
+        );
+        // Zero would spin; an hour is already absurd.
+        assert_eq!(
+            Cli::parse_from(["netinspect", "-w", "0"]).watch_interval(),
+            Some(Duration::from_secs(1))
+        );
+        // Redrawing a frame and streaming JSON are different things.
+        assert!(Cli::try_parse_from(["netinspect", "-w", "--json"]).is_err());
     }
 
     #[test]
