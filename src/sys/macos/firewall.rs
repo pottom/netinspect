@@ -78,10 +78,21 @@ mod tests {
         assert_eq!(interpret(-1).state, FirewallMode::Unknown);
     }
 
+    /// The property, which holds on any machine: no readable file means no
+    /// answer. What `collect` returns depends on the macOS it runs on — the
+    /// plist is gone on 26 and still there on 14, which is why the legacy path
+    /// is kept rather than deleted.
     #[test]
-    fn a_missing_file_yields_unknown_not_off() {
+    fn a_missing_file_yields_no_answer() {
         assert!(read_state(Path::new("/nonexistent/com.apple.alf.plist")).is_none());
-        assert_eq!(collect().state, FirewallMode::Unknown);
+
+        let state = collect().state;
+        assert_eq!(
+            state == FirewallMode::Unknown,
+            !Path::new(ALF_PLIST).exists(),
+            "collect() said {state:?} while {ALF_PLIST} exists = {}",
+            Path::new(ALF_PLIST).exists()
+        );
     }
 
     #[test]

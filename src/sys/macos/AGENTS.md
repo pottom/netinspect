@@ -44,7 +44,7 @@ widely repeated, so they are recorded here rather than rediscovered.
 
 | Source | Reality | What we do |
 |---|---|---|
-| `/Library/Preferences/com.apple.alf.plist` | Does not exist. The only copy on disk is the OS default template under `/usr/libexec/ApplicationFirewall/`, whose `globalstate` reads 0 — indistinguishable from a machine with the firewall genuinely off. | Report `Unknown` and omit the footer. **The template is never a source.** |
+| `/Library/Preferences/com.apple.alf.plist` | Gone on macOS 26. **Still present on macOS 14** — CI runs there and reads a real `globalstate`. The only copy on 26 is the OS default template under `/usr/libexec/ApplicationFirewall/`, whose `globalstate` reads 0, indistinguishable from a machine with the firewall genuinely off. | Read the real file where it exists; otherwise report `Unknown` and omit the footer. **The template is never a source.** |
 | `State:/Network/Interface/<if>/DHCP` | No such key. Lease files under `/var/db/dhcpclient/leases/` are root-only. | Address source comes from `Setup:/Network/Service/<id>/IPv4` → `ConfigMethod`; the expiry is simply `None`. |
 | `State:/Network/Interface/<if>/AirPort` → `SSID_STR` | Blanked by the privacy gating. `BSSID` reads `02:00:…`. `CHANNEL` is real. | Fall through to `CachedScanRecord`. |
 | `State:/Network/Interface/<if>/AirPort` → `CachedScanRecord` | An `NSKeyedArchiver` blob that still carries the real SSID. Undocumented. | `scan_record.rs` extracts it. Native, so it precedes the subprocess ladder. Every failure path returns `None` quietly. |
