@@ -7,5 +7,6 @@
 
 pub mod cli;
 pub mod model;
+pub mod probe;
 pub mod render;
 pub mod sys;

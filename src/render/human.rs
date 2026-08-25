@@ -8,8 +8,8 @@
 //! shape of report is reachable from a test.
 
 use crate::model::{
-    AddressSource, DnsConfig, Interface, InterfaceKind, InterfaceStatus, Ipv6Scope, Snapshot,
-    WifiDetail,
+    AddressSource, DnsConfig, Interface, InterfaceKind, InterfaceStatus, Ipv6Scope, Reachability,
+    ReachabilityState, Snapshot, WifiDetail,
 };
 
 use super::layout::{
@@ -88,6 +88,9 @@ pub fn render(snapshot: &Snapshot, options: &Options) -> String {
     }
 
     dns_section(&mut out, &snapshot.dns, options);
+    if let Some(reachability) = &snapshot.reachability {
+        reachability_section(&mut out, reachability, options);
+    }
     footer(&mut out, snapshot, options);
 
     let mut text = out.join("\n");
@@ -253,7 +256,8 @@ fn interface_block(out: &mut Vec<String>, iface: &Interface, options: &Options) 
 
 /// One label/value row plus its optional annotation and continuation.
 struct Row {
-    label: &'static str,
+    label: String,
+    label_role: Role,
     value: Vec<(Role, String)>,
     /// Right-aligned reference material.
     annotation: Option<Vec<(Role, String)>>,
@@ -262,13 +266,21 @@ struct Row {
 }
 
 impl Row {
-    fn new(label: &'static str, value: Vec<(Role, String)>) -> Self {
+    fn new(label: impl Into<String>, value: Vec<(Role, String)>) -> Self {
         Row {
-            label,
+            label: label.into(),
+            label_role: Role::Dim,
             value,
             annotation: None,
             continuation: None,
         }
+    }
+
+    /// The reachability verdict is a state, not a label, so it takes the
+    /// state's colour.
+    fn with_label_role(mut self, role: Role) -> Self {
+        self.label_role = role;
+        self
     }
 
     fn annotate(mut self, text: impl Into<String>) -> Self {
@@ -439,7 +451,7 @@ fn emit_row(out: &mut Vec<String>, options: &Options, row: &Row, rail: Rail) {
         if !row.label.is_empty() {
             let mut head = Line::new();
             push_rail(&mut head, options, rail);
-            head.push(theme, Role::Dim, row.label);
+            head.push(theme, row.label_role, &row.label);
             out.push(head.finish());
         }
         let mut line = Line::new();
@@ -465,7 +477,18 @@ fn emit_row(out: &mut Vec<String>, options: &Options, row: &Row, rail: Rail) {
 
     let mut line = Line::new();
     push_rail(&mut line, options, rail);
-    line.push(theme, Role::Dim, row.label);
+    line.push(theme, row.label_role, &row.label);
+
+    // A label long enough to touch the value column takes the row to itself.
+    // The reachability verdict is the case that needs it: "captive portal" is
+    // wider than the column, and running it into its own explanation would be
+    // unreadable.
+    if line.width() + 2 > VALUE_COL {
+        out.push(line.finish());
+        line = Line::new();
+        push_rail(&mut line, options, rail);
+    }
+
     line.pad_to(VALUE_COL);
     for (role, text) in &row.value {
         line.push(theme, *role, text);
@@ -604,6 +627,196 @@ fn duration(seconds: u64) -> String {
         s if s < 3600 => format!("{}m", s / 60),
         s if s < 86400 => format!("{}h {}m", s / 3600, (s % 3600) / 60),
         s => format!("{}d {}h", s / 86400, (s % 86400) / 3600),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Reachability
+// ---------------------------------------------------------------------------
+
+/// One rung: what it is called, whether it was attempted, and how long it took.
+struct Rung {
+    name: &'static str,
+    /// `None` means never attempted — a different fact from failed.
+    outcome: Option<bool>,
+    ms: Option<u64>,
+}
+
+fn rungs(report: &Reachability) -> [Rung; 4] {
+    [
+        Rung {
+            name: "link",
+            outcome: report.link.map(|s| s.ok),
+            ms: report.link.and_then(|s| s.ms),
+        },
+        Rung {
+            name: "gateway",
+            outcome: report.gateway.map(|s| s.ok),
+            ms: report.gateway.and_then(|s| s.ms),
+        },
+        Rung {
+            name: "dns",
+            outcome: report.dns.map(|s| s.ok),
+            ms: report.dns.and_then(|s| s.ms),
+        },
+        Rung {
+            name: "http",
+            outcome: report.http.map(|s| s.ok),
+            ms: report.http.and_then(|s| s.ms),
+        },
+    ]
+}
+
+fn reachability_section(out: &mut Vec<String>, report: &Reachability, options: &Options) {
+    let theme = &options.theme;
+    out.push(String::new());
+    out.push(section(theme, "reachability"));
+
+    if options.narrow() {
+        narrow_ladder(out, report, options);
+    } else {
+        ladder(out, report, options);
+    }
+
+    let (word, role) = verdict(report.state);
+    // Without colour a verdict is just another word on the line, so it takes
+    // brackets the way an interface status does.
+    let word = if theme.monochrome() {
+        format!("[{word}]")
+    } else {
+        word.to_owned()
+    };
+    emit_row(
+        out,
+        options,
+        &Row::new(word, vec![(Role::Faint, explanation(report).to_owned())])
+            .with_label_role(role),
+        Rail::None,
+    );
+
+    // The login page is the fix, so it has to look like something you can go
+    // to rather than another value.
+    if let Some(portal) = &report.captive_portal {
+        emit_row(
+            out,
+            options,
+            &Row::new("sign in", vec![(Role::Action, portal.login_url.clone())]),
+            Rail::None,
+        );
+    }
+}
+
+/// The ladder on one line, timings on the line below, each aligned under the
+/// stage it belongs to.
+fn ladder(out: &mut Vec<String>, report: &Reachability, options: &Options) {
+    let theme = &options.theme;
+    let mut line = Line::new();
+    line.pad_to(LABEL_COL);
+    let mut columns: Vec<(usize, Option<u64>)> = Vec::new();
+
+    for (index, rung) in rungs(report).iter().enumerate() {
+        if index > 0 {
+            line.push(theme, Role::Rule, &format!(" {} ", theme.glyphs.connector));
+        }
+        columns.push((line.width() + 1, rung.ms));
+        let (role, mark) = mark_for(rung.outcome, theme);
+        // A stage that was never attempted is structure, not a result: its
+        // name recedes with it.
+        let name_role = if rung.outcome.is_some() {
+            Role::Bright
+        } else {
+            Role::Rule
+        };
+        line.push(theme, name_role, rung.name);
+        line.space(1);
+        line.push(theme, role, mark);
+    }
+    out.push(line.finish());
+
+    if columns.iter().any(|(_, ms)| ms.is_some()) {
+        let mut timings = Line::new();
+        for (column, ms) in columns {
+            if let Some(ms) = ms {
+                timings.pad_to(column);
+                timings.push(theme, Role::Faint, &format!("{ms} ms"));
+            }
+        }
+        out.push(timings.finish());
+    }
+}
+
+/// Narrow terminals get the rungs wrapped and the timings dropped: which stage
+/// broke matters, how many milliseconds it took does not.
+fn narrow_ladder(out: &mut Vec<String>, report: &Reachability, options: &Options) {
+    let theme = &options.theme;
+    let mut line = Line::new();
+    line.pad_to(LABEL_COL);
+    let mut first = true;
+
+    for rung in rungs(report).iter() {
+        let (role, mark) = mark_for(rung.outcome, theme);
+        let width = rung.name.chars().count() + 1 + mark.chars().count();
+        if !first && line.width() + width + 3 > options.width.min(RIGHT_EDGE) {
+            out.push(line.finish());
+            line = Line::new();
+            line.pad_to(LABEL_COL);
+            first = true;
+        }
+        if !first {
+            line.push(theme, Role::Rule, &format!(" {} ", theme.glyphs.connector));
+        }
+        let name_role = if rung.outcome.is_some() {
+            Role::Bright
+        } else {
+            Role::Rule
+        };
+        line.push(theme, name_role, rung.name);
+        line.space(1);
+        line.push(theme, role, mark);
+        first = false;
+    }
+    out.push(line.finish());
+}
+
+fn mark_for(outcome: Option<bool>, theme: &Theme) -> (Role, &'static str) {
+    match outcome {
+        Some(true) => (Role::Ok, theme.glyphs.check),
+        Some(false) => (Role::Fail, theme.glyphs.cross),
+        // Never attempted. Saying "failed" about something we never tried is
+        // the most common way a CLI lies about what it knows.
+        None => (Role::Rule, theme.glyphs.pending),
+    }
+}
+
+/// One word, in the colour of what it says.
+fn verdict(state: ReachabilityState) -> (&'static str, Role) {
+    match state {
+        ReachabilityState::Online => ("online", Role::Ok),
+        // The open internet is involved, and the severity is in the word.
+        ReachabilityState::CaptivePortal => ("captive portal", Role::Public),
+        ReachabilityState::DnsFailure => ("dns failure", Role::Fail),
+        ReachabilityState::GatewayUnreachable => ("no gateway", Role::Fail),
+        ReachabilityState::LinkDown => ("link down", Role::Fail),
+        ReachabilityState::Unknown => ("unknown", Role::Rule),
+    }
+}
+
+/// Plain language, no jargon. "the network answers, the internet does not"
+/// beats "HTTP 302 intercept".
+fn explanation(report: &Reachability) -> &'static str {
+    match report.state {
+        ReachabilityState::Online => {
+            if report.http.is_some_and(|s| s.ok) {
+                "no captive portal, nothing filtered"
+            } else {
+                "dns answers, web traffic is filtered"
+            }
+        }
+        ReachabilityState::CaptivePortal => "the network wants you to sign in first",
+        ReachabilityState::DnsFailure => "the network answers, the internet does not",
+        ReachabilityState::GatewayUnreachable => "this machine cannot reach the router",
+        ReachabilityState::LinkDown => "no interface has a usable address",
+        ReachabilityState::Unknown => "nothing was determined",
     }
 }
 

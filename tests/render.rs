@@ -125,6 +125,125 @@ fn full() -> Snapshot {
     ])
 }
 
+fn stage(ok: bool, ms: Option<u64>) -> Stage {
+    Stage { ok, ms }
+}
+
+fn online() -> Reachability {
+    Reachability {
+        link: Some(stage(true, None)),
+        gateway: Some(stage(true, Some(2))),
+        dns: Some(stage(true, Some(11))),
+        http: Some(HttpStage {
+            ok: true,
+            ms: Some(38),
+            status: Some(204),
+        }),
+        state: ReachabilityState::Online,
+        captive_portal: None,
+    }
+}
+
+#[test]
+fn reachability_online() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(online());
+    insta::assert_snapshot!(human::render(&snapshot, &options(80)));
+}
+
+#[test]
+fn reachability_captive_portal() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(Reachability {
+        http: Some(HttpStage {
+            ok: true,
+            ms: Some(24),
+            status: Some(302),
+        }),
+        state: ReachabilityState::CaptivePortal,
+        captive_portal: Some(CaptivePortal {
+            login_url: "http://wifi.example.net/login".to_owned(),
+        }),
+        ..online()
+    });
+    insta::assert_snapshot!(human::render(&snapshot, &options(80)));
+}
+
+/// The rule this whole design exists for: a stage that was never attempted is
+/// not a failed stage, and must not be drawn as one.
+#[test]
+fn a_stage_that_was_never_attempted_is_not_drawn_as_a_failure() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(Reachability {
+        link: Some(stage(true, None)),
+        gateway: Some(stage(true, Some(2))),
+        dns: Some(stage(false, Some(2000))),
+        http: None,
+        state: ReachabilityState::DnsFailure,
+        captive_portal: None,
+    });
+    let rendered = human::render(&snapshot, &options(80));
+
+    let ladder = rendered
+        .lines()
+        .find(|line| line.contains("link"))
+        .expect("the ladder is drawn");
+    // dns failed and is crossed; http was never tried and gets the pending dot.
+    assert!(ladder.contains("dns ✗"), "{ladder:?}");
+    assert!(ladder.contains("http ·"), "{ladder:?}");
+    assert_eq!(ladder.matches('✗').count(), 1, "{ladder:?}");
+    insta::assert_snapshot!(rendered);
+}
+
+#[test]
+fn reachability_link_down() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(Reachability {
+        link: Some(stage(false, None)),
+        gateway: None,
+        dns: None,
+        http: None,
+        state: ReachabilityState::LinkDown,
+        captive_portal: None,
+    });
+    let rendered = human::render(&snapshot, &options(80));
+    let ladder = rendered
+        .lines()
+        .find(|line| line.contains("link"))
+        .expect("the ladder is drawn");
+    // Three untried stages, and the one that failed is crossed, not dotted.
+    assert_eq!(ladder.matches('·').count(), 3, "{ladder:?}");
+    assert!(ladder.contains("link ✗"), "{ladder:?}");
+    insta::assert_snapshot!(rendered);
+}
+
+#[test]
+fn reachability_narrow_drops_the_timings() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(online());
+    let rendered = human::render(&snapshot, &options(48));
+    assert!(!rendered.contains(" ms"), "{rendered}");
+    insta::assert_snapshot!(rendered);
+}
+
+/// Port 80 filtered while the internet is reachable. Saying "offline" here
+/// would be wrong, and so would saying nothing is in the way.
+#[test]
+fn a_filtered_web_is_online_with_a_different_explanation() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(Reachability {
+        http: Some(HttpStage {
+            ok: false,
+            ms: Some(2000),
+            status: None,
+        }),
+        ..online()
+    });
+    let rendered = human::render(&snapshot, &options(80));
+    assert!(rendered.contains("online"), "{rendered}");
+    assert!(rendered.contains("filtered"), "{rendered}");
+}
+
 #[test]
 fn full_report() {
     insta::assert_snapshot!(human::render(&full(), &options(80)));

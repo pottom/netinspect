@@ -112,13 +112,76 @@ fn wifi_always_discloses_where_the_ssid_came_from() {
 #[test]
 fn absent_sections_are_null_not_omitted() {
     let report = report();
-    // The reachability ladder and public lookup have not run in this build;
-    // consumers must see null rather than a missing key.
+    // The public lookup and update check have not run in this build; consumers
+    // must see null rather than a missing key.
     for key in ["reachability", "public", "update"] {
         assert!(report.get(key).is_some(), "{key} must be present");
     }
     assert!(report["dns"]["servers"].is_array());
     assert!(report["dns"]["split_dns_scopes"].is_u64());
+}
+
+#[test]
+fn reachability_reports_every_stage_it_did_not_attempt_as_null() {
+    let report = report();
+    let reachability = &report["reachability"];
+    assert!(!reachability.is_null(), "the ladder runs by default");
+
+    let state = reachability["state"].as_str().expect("a state");
+    assert!(
+        [
+            "online",
+            "captive_portal",
+            "dns_failure",
+            "gateway_unreachable",
+            "link_down",
+            "unknown"
+        ]
+        .contains(&state),
+        "unexpected state {state}"
+    );
+
+    for stage in ["link", "gateway", "dns", "http"] {
+        let value = &reachability[stage];
+        if value.is_null() {
+            continue; // never attempted, which is not a failure
+        }
+        assert!(value["ok"].is_boolean(), "{stage}: {value}");
+        assert!(value["ms"].is_u64() || value["ms"].is_null(), "{stage}: {value}");
+    }
+
+    // A captive portal must always name somewhere to go.
+    if state == "captive_portal" {
+        assert!(reachability["captive_portal"]["login_url"].is_string());
+    } else {
+        assert!(reachability["captive_portal"].is_null());
+    }
+}
+
+#[test]
+fn no_check_leaves_the_ladder_unrun() {
+    let (ok, stdout) = run(&["--json", "--no-check"]);
+    assert!(ok);
+    let report: Value = serde_json::from_str(&stdout).expect("valid JSON");
+    // Not "everything failed" — not measured at all.
+    assert!(report["reachability"].is_null());
+}
+
+#[test]
+fn check_prints_nothing_and_reports_through_its_exit_code() {
+    let output = Command::new(env!("CARGO_BIN_EXE_netinspect"))
+        .arg("check")
+        .output()
+        .expect("runnable");
+    assert!(output.stdout.is_empty(), "check must be silent on success");
+
+    // Whatever this machine's network is doing, the code has to be one of the
+    // documented ones.
+    let code = output.status.code().expect("an exit code");
+    assert!(
+        [0, 10, 11, 12, 13].contains(&code),
+        "undocumented exit code {code}"
+    );
 }
 
 #[test]

@@ -2,7 +2,7 @@
 //!
 //! Flags win over environment variables.
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 use std::time::Duration;
 
@@ -22,6 +22,9 @@ reporting.";
     after_help = GEO_PROVIDER_NOTE
 )]
 pub struct Cli {
+    #[command(subcommand)]
+    pub command: Option<Command>,
+
     /// Restrict the interface section to one interface (e.g. en0, utun3)
     pub interface: Option<String>,
 
@@ -46,32 +49,59 @@ pub struct Cli {
     pub ipv6_only: bool,
 
     /// Disable the SSID helper ladder. No subprocess is spawned
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub no_helpers: bool,
 
     /// Allow the system_profiler SSID candidate, which takes seconds
-    #[arg(long, conflicts_with = "no_helpers")]
+    #[arg(long, global = true, conflicts_with = "no_helpers")]
     pub slow_helpers: bool,
 
     /// Never emit ANSI sequences
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub no_color: bool,
 
     /// Use the ASCII fallback glyph set
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub ascii: bool,
 
     /// Palette to render with. Detected from the terminal background by default
-    #[arg(long, value_name = "PALETTE",
+    #[arg(long, global = true, value_name = "PALETTE",
           value_parser = ["dark", "dark-warm", "light", "light-warm"])]
     pub theme: Option<String>,
 
+    /// Skip the reachability probes
+    #[arg(long, global = true)]
+    pub no_check: bool,
+
+    /// Per-probe timeout in milliseconds
+    #[arg(long, global = true, value_name = "MS", default_value_t = 2000)]
+    pub timeout: u64,
+
     /// Log probe timing and cache decisions to stderr
-    #[arg(short = 'v', long)]
+    #[arg(short = 'v', long, global = true)]
     pub verbose: bool,
 }
 
+#[derive(Debug, Subcommand)]
+pub enum Command {
+    /// Report connectivity through the exit code alone. Prints nothing on
+    /// success unless -v is given.
+    ///
+    /// Exit codes: 0 online, 10 link down, 11 gateway unreachable,
+    /// 12 dns failure, 13 captive portal.
+    Check,
+}
+
 impl Cli {
+    /// Whether the reachability ladder should run at all.
+    pub fn probes_enabled(&self) -> bool {
+        matches!(self.command, Some(Command::Check)) || !self.no_check
+    }
+
+    pub fn probe_timeout(&self) -> std::time::Duration {
+        Duration::from_millis(self.timeout.clamp(50, 30_000))
+    }
+
     pub fn helper_policy(&self) -> crate::sys::HelperPolicy {
         use crate::sys::HelperPolicy;
         if self.no_helpers || env_flag("NETINSPECT_NO_HELPERS") {
@@ -283,6 +313,48 @@ mod tests {
         assert_eq!(
             Cli::parse_from(["netinspect", "en0"]).interface.as_deref(),
             Some("en0")
+        );
+    }
+
+    #[test]
+    fn check_is_a_subcommand_not_an_interface_name() {
+        let cli = Cli::parse_from(["netinspect", "check"]);
+        assert!(matches!(cli.command, Some(Command::Check)));
+        assert_eq!(cli.interface, None);
+    }
+
+    #[test]
+    fn global_flags_reach_the_subcommand() {
+        // `netinspect check -v` has to work; a flag that only parses before the
+        // subcommand is a flag nobody will find.
+        let cli = Cli::parse_from(["netinspect", "check", "-v", "--timeout", "800"]);
+        assert!(cli.verbose);
+        assert_eq!(cli.timeout, 800);
+    }
+
+    #[test]
+    fn check_probes_even_with_no_check() {
+        // `--no-check` suppresses the report's reachability section; asking
+        // `check` for a verdict and then not measuring one would be absurd.
+        let cli = Cli::parse_from(["netinspect", "check", "--no-check"]);
+        assert!(cli.probes_enabled());
+        assert!(!Cli::parse_from(["netinspect", "--no-check"]).probes_enabled());
+        assert!(Cli::parse_from(["netinspect"]).probes_enabled());
+    }
+
+    #[test]
+    fn the_timeout_is_clamped_to_something_survivable() {
+        assert_eq!(
+            Cli::parse_from(["netinspect"]).probe_timeout(),
+            Duration::from_millis(2000)
+        );
+        assert_eq!(
+            Cli::parse_from(["netinspect", "--timeout", "0"]).probe_timeout(),
+            Duration::from_millis(50)
+        );
+        assert_eq!(
+            Cli::parse_from(["netinspect", "--timeout", "999999"]).probe_timeout(),
+            Duration::from_millis(30_000)
         );
     }
 }

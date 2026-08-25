@@ -57,14 +57,20 @@ Landed out of band, from the Claude Design project
 - [x] Contrast and hue-separation asserted in tests, including the two claims
       in `DESIGN.md` §3 that the shipped palettes do not meet
 
-## M3 — Reachability ladder and `check`
+## M3 — Reachability ladder and `check` ✅
 
-- [ ] Four staged probes with short-circuiting; worst case under ~2.5 s
-- [ ] Captive portal classification, including the "many names, one address"
-      signal
-- [ ] `check` subcommand with exit codes 0/10/11/12/13
-- [ ] Trait-object HTTP client and resolver, with mock tests for 204, 302,
-      200-with-body and timeout
+- [x] Four staged probes with short-circuiting, each bounded by the ladder
+      rather than by its collaborator; the whole ladder finishes inside
+      `GATEWAY_TIMEOUT + timeout` (2.5 s by default), measured at ~80 ms
+- [x] Captive portal classification: 204, Apple's page, a redirect, an
+      intercepted 200, a filtered port 80, and the "every name, one address"
+      resolver signal
+- [x] `check` subcommand with exit codes 0/10/11/12/13, silent on success
+- [x] Trait-object `Connector`, `Resolver` and `HttpClient`, with a mock
+      covering every outcome the ladder distinguishes
+- [x] The reachability section rendered per `DESIGN.md`: timings aligned under
+      their stage, an untried stage drawn as `·` and never as `✗`, and a
+      one-word verdict with a plain-language explanation
 
 ## M4 — Public address, cache, timezone, VPN correlation
 

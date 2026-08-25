@@ -97,6 +97,8 @@ cargo run -- --json | jq .
   the only subtree permitted `cfg`/`unsafe`. Owns `src/sys/**`.
   - `src/sys/macos/AGENTS.md` — the macOS backend, the subprocess exception,
     and what current macOS no longer exposes.
+- `src/probe/AGENTS.md` — the reachability ladder and its budget.
+  Owns `src/probe/**`.
 - `src/render/AGENTS.md` — layout, colour, glyphs and output formats.
 
 Root-owned: `src/lib.rs`, `src/main.rs`, `src/cli.rs`, `src/model.rs`,

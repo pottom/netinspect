@@ -29,6 +29,27 @@ $ netinspect
 
 `--json` emits the same data in a stable, versioned schema.
 
+## Is it actually online
+
+```
+$ netinspect check && echo yes
+```
+
+`check` prints nothing and answers through its exit code: `0` online, `10` link
+down, `11` gateway unreachable, `12` dns failure, `13` captive portal. It exists
+for shell prompts and scripts.
+
+The four stages run in order and stop at the first failure, so the blame lands
+on the thing that actually broke. A stage that was never attempted is drawn as a
+dim dot, not a red cross — it is a different fact, and reporting it as a failure
+would be a lie. The whole ladder is bounded at 2.5 seconds regardless of how
+slow the network is.
+
+Only two hosts are ever contacted, both over plain HTTP: Apple's captive portal
+endpoint that macOS already queries by itself, and one unrelated name. If both
+resolve to the same address, something is intercepting every query — which the
+report says before the HTTP stage confirms it.
+
 ## Reading the colour
 
 One idea carries the whole tool: **hue encodes reach — how far away a thing can
