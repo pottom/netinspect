@@ -1,0 +1,25 @@
+[package]
+name = "netinspect-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+# Its own workspace: the fuzz targets need nightly and must not be pulled into
+# an ordinary `cargo build` of the tool.
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.netinspect]
+path = ".."
+
+[[bin]]
+name = "rt_msg"
+path = "fuzz_targets/rt_msg.rs"
+test = false
+doc = false
+bench = false

@@ -263,6 +263,87 @@ fn check_makes_no_geo_request_even_without_no_lookup() {
 }
 
 #[test]
+fn routes_shares_the_envelope_and_its_documented_shape() {
+    let (ok, stdout) = run(&["routes", "--json"]);
+    assert!(ok);
+    let report: Value = serde_json::from_str(&stdout).expect("valid JSON");
+
+    assert_eq!(report["schema"], 1);
+    assert!(report["version"].is_string());
+    assert!(report["timestamp"].is_string());
+
+    let routes = report["routes"].as_array().expect("an array");
+    assert!(!routes.is_empty(), "a machine always has a loopback route");
+
+    for route in routes {
+        assert!(["inet", "inet6"].contains(&route["family"].as_str().unwrap()));
+        assert!(route["destination"].is_string());
+        assert!(route["is_default"].is_boolean());
+        assert!(route["flags"].is_string());
+        assert!(route["flags_decoded"].is_array());
+
+        let kind = route["gateway_kind"].as_str().expect("a kind");
+        assert!(["address", "link", "mac", "none"].contains(&kind), "{kind}");
+        // A gateway and its kind must agree: "none" is the only kind that may
+        // come without one.
+        assert_eq!(
+            route["gateway"].is_null(),
+            kind == "none",
+            "gateway disagrees with its kind: {route}"
+        );
+
+        assert!(
+            route["expires_in_seconds"].is_u64() || route["expires_in_seconds"].is_null(),
+            "{route}"
+        );
+    }
+
+    let summary = &report["route_summary"];
+    assert_eq!(summary["total"].as_u64().unwrap() as usize, routes.len());
+    assert!(summary["default_gateways"].is_u64());
+    assert!(summary["split_tunnel"].is_boolean());
+}
+
+#[test]
+fn the_default_view_hides_the_kernels_own_bookkeeping() {
+    let count = |args: &[&str]| -> usize {
+        let (ok, stdout) = run(args);
+        assert!(ok);
+        let report: Value = serde_json::from_str(&stdout).unwrap();
+        report["routes"].as_array().unwrap().len()
+    };
+    // Cloned host entries, multicast and every interface's link-local prefix.
+    assert!(count(&["routes", "--json", "--all"]) >= count(&["routes", "--json"]));
+
+    // And a family filter is a filter, not a relabelling.
+    let (_, stdout) = run(&["routes", "--json", "-6"]);
+    let report: Value = serde_json::from_str(&stdout).unwrap();
+    assert!(report["routes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|route| route["family"] == "inet6"));
+}
+
+#[test]
+fn routes_makes_no_network_request() {
+    // A routing table is read from the kernel. Probing or looking anything up
+    // for it would be work nobody asked for.
+    let directory = std::env::temp_dir().join(format!("netinspect-routes-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&directory);
+
+    let output = Command::new(env!("CARGO_BIN_EXE_netinspect"))
+        .args(["routes", "--json"])
+        .env("NETINSPECT_CACHE_DIR", &directory)
+        .output()
+        .expect("runnable");
+    assert!(output.status.success());
+    assert!(!directory.join("geo.json").exists());
+
+    let _ = std::fs::remove_dir_all(&directory);
+}
+
+#[test]
 fn pretty_requires_json() {
     let output = Command::new(env!("CARGO_BIN_EXE_netinspect"))
         .arg("--pretty")

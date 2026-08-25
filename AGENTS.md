@@ -97,6 +97,8 @@ cargo run -- --json | jq .
   the only subtree permitted `cfg`/`unsafe`. Owns `src/sys/**`.
   - `src/sys/macos/AGENTS.md` — the macOS backend, the subprocess exception,
     and what current macOS no longer exposes.
+- `src/parse/AGENTS.md` — the binary buffer walkers and their fixtures.
+  Owns `src/parse/**` and `tests/fixtures/`.
 - `src/probe/AGENTS.md` — the reachability ladder and its budget.
   Owns `src/probe/**`.
 - `src/public/AGENTS.md` — the public-address lookup, the only part of the tool

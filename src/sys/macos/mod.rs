@@ -4,6 +4,7 @@ mod cf;
 mod dns;
 mod firewall;
 mod interfaces;
+mod routes;
 mod scan_record;
 mod services;
 mod ssid_helper;
@@ -42,8 +43,8 @@ impl Platform for MacOs {
     fn dns_config(&self) -> Result<DnsConfig> {
         Ok(dns::collect(&self.store()?))
     }
-    fn routes(&self, _family: Option<Family>) -> Result<Vec<Route>> {
-        bail!("not implemented")
+    fn routes(&self, family: Option<Family>) -> Result<Vec<Route>> {
+        routes::collect(family)
     }
     fn sockets(&self, _filter: SocketFilter) -> Result<SocketTable> {
         bail!("not implemented")

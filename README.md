@@ -29,6 +29,33 @@ $ netinspect
 
 `--json` emits the same data in a stable, versioned schema.
 
+## Where the traffic goes
+
+```
+$ netinspect routes
+  ipv4 ──────────────────────────────────────────────────────────
+
+     destination         gateway            iface      flags
+     default             192.168.1.1        en0        UGScg
+     10.4.0.0/22         10.4.0.51          utun4      UGSc
+     192.168.1.0/24      link#12            en0        UCS
+
+  101 routes   8 default gateways · split tunnel active
+```
+
+Read from the kernel with `sysctl(3)`, not by parsing `netstat` — its columns
+move between releases and it truncates long IPv6 addresses. Column widths are
+measured from the data; when the table will not fit, the gateway column gives
+way first and a destination never does.
+
+By default it hides what the kernel keeps for itself: entries it cloned for
+hosts this machine has spoken to, multicast, and the link-local prefix every
+interface carries. `--all` shows them — on the machine this was built on, the
+difference is 101 rows against 218.
+
+The footer names two conditions worth noticing: more than one default gateway,
+and a tunnel that carries some routes but not the default one.
+
 ## Is it actually online
 
 ```

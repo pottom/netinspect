@@ -284,6 +284,21 @@ The dangerous group must never be below the fold.
   gateway column truncates first, with `…`. **Never truncate a destination.**
 - Flags are always `faint`. They are reference material, not the point.
 
+> **Implementation note — `routes`.** Three details where the prose and the
+> visual reference disagree, resolved in favour of the prose:
+>
+> - The letter order is the one §6.6 of the specification lists
+>   (`U G H S C c L W I i m g R D M`), not `netstat`'s and not the artboard's,
+>   which contradicts itself between rows. A fixed order matters more than
+>   matching either.
+> - The default view hides what §6.6 says to hide — cloned host entries,
+>   multicast, and every interface's link-local prefix — even though the
+>   artboard shows a multicast and a `fe80::/64` row. On the machine this was
+>   built on that is the difference between 218 rows and 101.
+> - `routes` heads each family with `ipv4 ────…` rather than the report's
+>   uppercase section title. It is the subcommand's own layout, and the
+>   artboard is the only description of it.
+
 ### listen
 
 - Group headers carry the group's reach colour on the rail and the count in

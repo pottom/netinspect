@@ -5,10 +5,12 @@ use anyhow::Result;
 use clap::Parser;
 
 use netinspect::cli::{self, Cli, Command};
-use netinspect::model::{DnsConfig, Interface, PublicAddress, Reachability, Snapshot, SCHEMA};
+use netinspect::model::{
+    DnsConfig, Interface, PublicAddress, Reachability, RoutesReport, Snapshot, SCHEMA,
+};
 use netinspect::probe::{self, net::Net, Ladder};
 use netinspect::public::{self, cache};
-use netinspect::render::{human, json};
+use netinspect::render::{human, json, routes as render_routes};
 use netinspect::sys;
 
 fn main() -> ExitCode {
@@ -31,6 +33,10 @@ fn run() -> Result<ExitCode> {
     });
     let interfaces = platform.interfaces()?;
     let dns = platform.dns_config()?;
+
+    if let Some(Command::Routes { iface }) = &cli.command {
+        return routes(&cli, platform.as_ref(), &interfaces, iface.as_deref());
+    }
 
     let measured = if cli.probes_enabled() {
         Some(measure(&cli, &interfaces, &dns)?)
@@ -69,6 +75,52 @@ fn run() -> Result<ExitCode> {
 
     // The default command succeeded at its job of reporting, whatever the
     // network turned out to be doing. Only `check` encodes connectivity.
+    Ok(ExitCode::SUCCESS)
+}
+
+fn routes(
+    cli: &Cli,
+    platform: &dyn sys::Platform,
+    interfaces: &[Interface],
+    iface: Option<&str>,
+) -> Result<ExitCode> {
+    let all = platform.routes(cli.family())?;
+
+    let shown: Vec<_> = all
+        .iter()
+        .filter(|route| cli.all || render_routes::is_interesting(route))
+        .filter(|route| match iface {
+            Some(name) => route.interface.as_deref() == Some(name),
+            None => true,
+        })
+        .cloned()
+        .collect();
+    let summary = render_routes::summarise(&shown, &all, interfaces);
+
+    let text = if cli.json {
+        json::emit(
+            &RoutesReport {
+                schema: SCHEMA,
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+                timestamp: now(),
+                routes: shown,
+                route_summary: summary,
+            },
+            cli.pretty,
+        )?
+    } else {
+        render_routes::render(
+            &shown,
+            &summary,
+            &render_routes::Options {
+                theme: cli.theme(),
+                edge: cli.content_edge(),
+            },
+        )
+        .trim_end()
+        .to_owned()
+    };
+    println!("{text}");
     Ok(ExitCode::SUCCESS)
 }
 

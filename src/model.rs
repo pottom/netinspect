@@ -334,6 +334,17 @@ pub enum GatewayKind {
     None,
 }
 
+/// The `routes` subcommand's own top-level object, sharing the report's
+/// envelope.
+#[derive(Debug, Clone, Serialize)]
+pub struct RoutesReport {
+    pub schema: u32,
+    pub version: String,
+    pub timestamp: String,
+    pub routes: Vec<Route>,
+    pub route_summary: RouteSummary,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct RouteSummary {
     pub total: usize,

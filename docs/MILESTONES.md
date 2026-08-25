@@ -97,12 +97,22 @@ Landed out of band, after the report was seen on a wide terminal.
 - [x] `--no-lookup`, `NETINSPECT_NO_LOOKUP`, `NETINSPECT_GEO_ENDPOINT`, and
       `check` never looking up at all
 
-## M5 — `routes`
+## M5 — `routes` ✅
 
-- [ ] `parse/rt_msg.rs`: a pure `&[u8]` walker over the `NET_RT_DUMP` buffer
-- [ ] `sysctl(3)` FFI, flag decoding, prefix length from the netmask sockaddr
-- [ ] Rendering with column widths computed from the data
-- [ ] Committed fixtures (VPN up, VPN down, IPv6 disabled) and a fuzz target
+- [x] `parse/rt_msg.rs`: a pure `&[u8]` walker over the `NET_RT_DUMP` buffer,
+      with every malformed shape returning an error rather than panicking
+- [x] `sysctl(3)` FFI, the documented flag order, prefix length read from a
+      netmask the kernel truncates to as few bytes as it needed
+- [x] Rendering with column widths measured from the data; the gateway column
+      truncates first and a destination never does
+- [x] Three committed fixtures — real buffers with the addresses rewritten into
+      the documentation ranges — plus every truncation of each, 4000 corrupted
+      variants, and a `cargo-fuzz` target
+- [x] `--all`, `--iface`, `-4`/`-6`, and `--json` on the shared envelope
+
+Only one machine was available to capture from, so the fixtures are one tunnel
+state rather than the three the specification asks for. The unit tests build
+the shapes a capture could not supply.
 
 ## M6 — `listen` and the firewall footer
 

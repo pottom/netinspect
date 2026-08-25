@@ -29,23 +29,24 @@ pub struct Cli {
     pub interface: Option<String>,
 
     /// Emit JSON instead of the human report. Implies --no-color
-    #[arg(short = 'j', long)]
+    #[arg(short = 'j', long, global = true)]
     pub json: bool,
 
     /// Indent JSON output
-    #[arg(long, requires = "json")]
+    #[arg(long, global = true, requires = "json")]
     pub pretty: bool,
 
-    /// Include inactive and loopback interfaces in full detail
-    #[arg(short = 'a', long)]
+    /// Show everything: inactive and loopback interfaces in full detail, and
+    /// the cloned, multicast and link-local entries `routes` hides
+    #[arg(short = 'a', long, global = true)]
     pub all: bool,
 
-    /// Suppress IPv6 rows
-    #[arg(short = '4', long = "ipv4-only", conflicts_with = "ipv6_only")]
+    /// Suppress IPv6
+    #[arg(short = '4', long = "ipv4-only", global = true, conflicts_with = "ipv6_only")]
     pub ipv4_only: bool,
 
-    /// Suppress IPv4 rows
-    #[arg(short = '6', long = "ipv6-only")]
+    /// Suppress IPv4
+    #[arg(short = '6', long = "ipv6-only", global = true)]
     pub ipv6_only: bool,
 
     /// Disable the SSID helper ladder. No subprocess is spawned
@@ -88,6 +89,12 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Print the routing table
+    Routes {
+        /// Only routes whose output interface matches
+        #[arg(long, value_name = "NAME")]
+        iface: Option<String>,
+    },
     /// Report connectivity through the exit code alone. Prints nothing on
     /// success unless -v is given.
     ///
@@ -97,16 +104,30 @@ pub enum Command {
 }
 
 impl Cli {
-    /// Whether the reachability ladder should run at all.
+    /// Whether the reachability ladder should run at all. Only the default
+    /// report and `check` have any use for it.
     pub fn probes_enabled(&self) -> bool {
-        matches!(self.command, Some(Command::Check)) || !self.no_check
+        match self.command {
+            Some(Command::Check) => true,
+            Some(Command::Routes { .. }) => false,
+            None => !self.no_check,
+        }
+    }
+
+    /// Which address family the routing table is asked for.
+    pub fn family(&self) -> Option<crate::model::Family> {
+        match (self.ipv4_only, self.ipv6_only) {
+            (true, false) => Some(crate::model::Family::Inet),
+            (false, true) => Some(crate::model::Family::Inet6),
+            _ => None,
+        }
     }
 
     /// Whether this run may tell the provider anything. `check` never does:
     /// it answers from the exit code and has no use for a location.
     pub fn lookup_enabled(&self) -> bool {
         !self.no_lookup
-            && !matches!(self.command, Some(Command::Check))
+            && self.command.is_none()
             && !crate::public::lookup_disabled()
     }
 
@@ -171,6 +192,12 @@ impl Cli {
             return Palette::Dark;
         }
         detect_palette().unwrap_or(Palette::Dark)
+    }
+
+    /// Where everything right-aligned lands, for the renderers that do not
+    /// take a full `human::Options`.
+    pub fn content_edge(&self) -> usize {
+        crate::render::layout::content_edge(self.width())
     }
 
     /// Everything the human renderer needs from the command line. `clock` is
@@ -335,6 +362,31 @@ mod tests {
             Cli::parse_from(["netinspect", "en0"]).interface.as_deref(),
             Some("en0")
         );
+    }
+
+    #[test]
+    fn every_subcommand_can_emit_json() {
+        // A flag that only parses before the subcommand is a flag nobody finds.
+        assert!(Cli::parse_from(["netinspect", "routes", "--json"]).json);
+        assert!(Cli::parse_from(["netinspect", "routes", "-j", "--pretty"]).pretty);
+        // And --pretty without --json is still a usage error, wherever it sits.
+        assert!(Cli::try_parse_from(["netinspect", "routes", "--pretty"]).is_err());
+    }
+
+    #[test]
+    fn routes_takes_the_global_family_flags() {
+        let cli = Cli::parse_from(["netinspect", "routes", "-6", "--all"]);
+        assert!(matches!(cli.command, Some(Command::Routes { iface: None })));
+        assert_eq!(cli.family(), Some(crate::model::Family::Inet6));
+        assert!(cli.all);
+        // And it never probes: a routing table needs no network.
+        assert!(!cli.probes_enabled());
+
+        let scoped = Cli::parse_from(["netinspect", "routes", "--iface", "utun4"]);
+        assert!(matches!(
+            scoped.command,
+            Some(Command::Routes { iface: Some(ref name) }) if name == "utun4"
+        ));
     }
 
     #[test]

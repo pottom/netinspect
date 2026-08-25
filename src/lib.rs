@@ -7,6 +7,7 @@
 
 pub mod cli;
 pub mod model;
+pub mod parse;
 pub mod probe;
 pub mod public;
 pub mod render;
