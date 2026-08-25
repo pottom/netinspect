@@ -7,12 +7,13 @@ mod interfaces;
 mod routes;
 mod scan_record;
 mod services;
+mod sockets;
 mod ssid_helper;
 mod sysinfo;
 mod vpn;
 mod wifi;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use system_configuration::dynamic_store::SCDynamicStore;
 
 use crate::model::{
@@ -46,8 +47,8 @@ impl Platform for MacOs {
     fn routes(&self, family: Option<Family>) -> Result<Vec<Route>> {
         routes::collect(family)
     }
-    fn sockets(&self, _filter: SocketFilter) -> Result<SocketTable> {
-        bail!("not implemented")
+    fn sockets(&self, filter: SocketFilter) -> Result<SocketTable> {
+        sockets::collect(filter)
     }
     fn firewall(&self) -> Result<FirewallState> {
         Ok(firewall::collect())

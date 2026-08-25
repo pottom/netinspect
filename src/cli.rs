@@ -89,6 +89,25 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// List listening sockets
+    Listen {
+        /// Only TCP
+        #[arg(long, conflicts_with = "udp")]
+        tcp: bool,
+        /// Only UDP
+        #[arg(long)]
+        udp: bool,
+        /// Only sockets reachable from off this machine
+        #[arg(long)]
+        exposed: bool,
+        /// Only this port
+        #[arg(long, value_name = "PORT")]
+        port: Option<u16>,
+        /// Annotate well-known ports with their service name
+        #[arg(long)]
+        resolve: bool,
+    },
+
     /// Print the routing table
     Routes {
         /// Only routes whose output interface matches
@@ -109,7 +128,7 @@ impl Cli {
     pub fn probes_enabled(&self) -> bool {
         match self.command {
             Some(Command::Check) => true,
-            Some(Command::Routes { .. }) => false,
+            Some(Command::Routes { .. }) | Some(Command::Listen { .. }) => false,
             None => !self.no_check,
         }
     }
@@ -362,6 +381,20 @@ mod tests {
             Cli::parse_from(["netinspect", "en0"]).interface.as_deref(),
             Some("en0")
         );
+    }
+
+    #[test]
+    fn listen_restricts_by_protocol_port_and_exposure() {
+        let cli = Cli::parse_from(["netinspect", "listen", "--tcp", "--port", "5432"]);
+        assert!(matches!(
+            cli.command,
+            Some(Command::Listen { tcp: true, port: Some(5432), .. })
+        ));
+        // Both protocols at once is a contradiction, not a default.
+        assert!(Cli::try_parse_from(["netinspect", "listen", "--tcp", "--udp"]).is_err());
+        // And it never probes.
+        assert!(!cli.probes_enabled());
+        assert!(!cli.lookup_enabled());
     }
 
     #[test]

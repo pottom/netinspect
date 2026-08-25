@@ -8,6 +8,7 @@
 
 use std::path::PathBuf;
 
+use netinspect::parse::pcb;
 use netinspect::parse::rt_msg::{walk, ParseError, SocketAddress};
 
 fn fixture(name: &str) -> Vec<u8> {
@@ -128,5 +129,86 @@ fn a_corrupted_real_buffer_never_panics() {
             buffer[at] ^= (next() % 256) as u8;
         }
         let _ = walk(&buffer);
+    }
+}
+
+
+// -------------------------------------------------------------------------
+// The socket table
+// -------------------------------------------------------------------------
+
+const SOCKETS: [(&str, usize, usize); 2] = [
+    // (fixture, sockets, listening)
+    ("sockets-tcp.bin", 115, 30),
+    ("sockets-udp.bin", 60, 31),
+];
+
+#[test]
+fn every_socket_fixture_walks_completely() {
+    for (name, total, listening) in SOCKETS {
+        let sockets = pcb::walk(&fixture(name)).unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_eq!(sockets.len(), total, "{name}");
+        assert_eq!(
+            sockets.iter().filter(|s| s.is_listening()).count(),
+            listening,
+            "{name}"
+        );
+    }
+}
+
+/// The block stream is padded to eight bytes and the structures are
+/// transcribed from a kernel that is not in the public SDK. If either is wrong
+/// the walk stops early, so a real buffer consumed to its last byte is the
+/// check that matters.
+#[test]
+fn a_real_buffer_yields_both_address_families_and_both_kinds_of_owner() {
+    let sockets = pcb::walk(&fixture("sockets-tcp.bin")).unwrap();
+
+    assert!(sockets.iter().any(|s| s.local.is_ipv4()), "no IPv4 socket");
+    assert!(sockets.iter().any(|s| s.local.is_ipv6()), "no IPv6 socket");
+    // Wildcard binds and loopback binds are the two ends of the exposure
+    // classification, and a real machine has both.
+    assert!(sockets
+        .iter()
+        .any(|s| s.local.to_string() == "0.0.0.0" && s.is_listening()));
+    assert!(sockets.iter().any(|s| s.local.is_loopback()));
+    // Owners survive the capture, root and otherwise.
+    assert!(sockets.iter().any(|s| s.uid == Some(0)));
+    assert!(sockets.iter().any(|s| s.uid.is_some_and(|uid| uid != 0)));
+    // And TCP sockets carry a state, which is what "listening" is read from.
+    assert!(sockets.iter().all(|s| s.state.is_some()));
+}
+
+#[test]
+fn every_truncation_of_a_real_socket_buffer_is_survivable() {
+    for (name, _, _) in SOCKETS {
+        let buffer = fixture(name);
+        for length in 0..buffer.len() {
+            // Either it describes what it was given or it refuses; both are
+            // fine, a panic is not.
+            if let Ok(sockets) = pcb::walk(&buffer[..length]) {
+                assert!(sockets.len() <= 115);
+            }
+        }
+    }
+}
+
+#[test]
+fn a_corrupted_real_socket_buffer_never_panics() {
+    let original = fixture("sockets-tcp.bin");
+    let mut seed = 0x1234_5678u32;
+    let mut next = || {
+        seed ^= seed << 13;
+        seed ^= seed >> 17;
+        seed ^= seed << 5;
+        seed
+    };
+    for _ in 0..4000 {
+        let mut buffer = original.clone();
+        for _ in 0..(next() % 8 + 1) {
+            let at = (next() as usize) % buffer.len();
+            buffer[at] ^= (next() % 256) as u8;
+        }
+        let _ = pcb::walk(&buffer);
     }
 }

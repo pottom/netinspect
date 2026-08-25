@@ -56,6 +56,35 @@ difference is 101 rows against 218.
 The footer names two conditions worth noticing: more than one default gateway,
 and a tunnel that carries some routes but not the default one.
 
+## What is listening
+
+```
+$ netinspect listen
+  listening ─────────────────────────────────────────────────
+
+  ▌  reachable from the network                     15 sockets
+  │  proto  address        process            pid
+  │  tcp    0.0.0.0:22     —                    —
+  │  tcp    [::]:5000      ControlCenter     91892
+
+  ▌  this machine only                              12 sockets
+  │  tcp    127.0.0.1:6379 redis-server       4021
+
+  ────────────────────────────────────────────────────────────
+  25 sockets owned by other users · sudo netinspect listen
+```
+
+Sockets come from `pcblist_n`, which lists **every** socket on the machine
+without any privileges, and process names are added from `libproc`, which can
+only see your own. So the list is always complete and sometimes anonymous — a
+socket whose owner could not be determined gets an em dash, never omission. An
+unattributed open port is still an open port, and hiding it would make this
+actively misleading as a security check. On the machine this was built on it
+finds eleven listeners `lsof` cannot see without `sudo`.
+
+Groups run most exposed first, because the dangerous one must never be below
+the fold.
+
 ## Is it actually online
 
 ```

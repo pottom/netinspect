@@ -55,6 +55,16 @@ pub trait Platform {
     fn wifi(&self, iface: &str) -> Result<Option<WifiDetail>>;
 }
 
+/// Who is running this process.
+///
+/// It lives here rather than at the call site because it is a syscall, and
+/// `tests/guards.rs` keeps `unsafe` inside this subtree — which is exactly how
+/// this ended up in the right place.
+pub fn current_uid() -> u32 {
+    // Safety: getuid cannot fail and touches no memory we own.
+    unsafe { libc::getuid() }
+}
+
 /// Select the backend for this target. Called once at startup.
 #[cfg(target_os = "macos")]
 pub fn platform(config: PlatformConfig) -> Box<dyn Platform> {

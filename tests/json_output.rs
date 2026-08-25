@@ -344,6 +344,103 @@ fn routes_makes_no_network_request() {
 }
 
 #[test]
+fn listen_shares_the_envelope_and_never_drops_a_socket() {
+    let (ok, stdout) = run(&["listen", "--json"]);
+    assert!(ok);
+    let report: Value = serde_json::from_str(&stdout).expect("valid JSON");
+
+    assert_eq!(report["schema"], 1);
+    let sockets = report["sockets"].as_array().expect("an array");
+
+    let mut unattributed = 0;
+    for socket in sockets {
+        assert!(["tcp", "udp"].contains(&socket["protocol"].as_str().unwrap()));
+        assert!(["inet", "inet6"].contains(&socket["family"].as_str().unwrap()));
+        assert!(socket["port"].is_u64());
+        assert!(socket["address"].is_string());
+
+        let exposure = socket["exposure"].as_str().expect("an exposure");
+        assert!(["wildcard", "loopback", "interface"].contains(&exposure), "{exposure}");
+
+        // `null` means the owner could not be determined. Consumers must
+        // handle it, and it must never be confused with "no process".
+        if socket["process"].is_null() {
+            unattributed += 1;
+        } else {
+            assert!(socket["process"]["name"].is_string());
+            assert!(socket["process"]["pid"].is_i64());
+            assert!(socket["process"]["uid"].is_u64());
+        }
+    }
+
+    let summary = &report["socket_summary"];
+    assert_eq!(summary["total"].as_u64().unwrap() as usize, sockets.len());
+    assert_eq!(summary["unattributed"].as_u64().unwrap(), unattributed);
+    let by_exposure = summary["wildcard"].as_u64().unwrap()
+        + summary["loopback"].as_u64().unwrap()
+        + summary["interface"].as_u64().unwrap();
+    assert_eq!(by_exposure as usize, sockets.len(), "every socket is in a group");
+
+    // Never "off" when it is not known.
+    let state = report["firewall"]["state"].as_str().expect("a state");
+    assert!(["off", "on", "block_all", "unknown"].contains(&state), "{state}");
+}
+
+/// The whole reason source A comes first: an unprivileged run must still see
+/// the sockets it cannot name.
+#[test]
+fn an_unprivileged_run_sees_sockets_it_cannot_attribute() {
+    let (_, stdout) = run(&["listen", "--json"]);
+    let report: Value = serde_json::from_str(&stdout).unwrap();
+    let sockets = report["sockets"].as_array().unwrap();
+
+    assert!(!sockets.is_empty(), "a machine always has something listening");
+    // On any normal macOS machine some of these belong to root, and this test
+    // is not running as root.
+    assert!(
+        report["socket_summary"]["unattributed"].as_u64().unwrap() > 0,
+        "expected at least one socket this user may not inspect"
+    );
+}
+
+#[test]
+fn listen_filters_are_filters_not_relabellings() {
+    let ports = |args: &[&str]| -> Vec<u64> {
+        let (ok, stdout) = run(args);
+        assert!(ok);
+        let report: Value = serde_json::from_str(&stdout).unwrap();
+        report["sockets"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s["port"].as_u64().unwrap())
+            .collect()
+    };
+
+    let all = ports(&["listen", "--json"]);
+    let tcp = ports(&["listen", "--json", "--tcp"]);
+    assert!(tcp.len() <= all.len());
+
+    let (_, stdout) = run(&["listen", "--json", "--tcp"]);
+    let report: Value = serde_json::from_str(&stdout).unwrap();
+    assert!(report["sockets"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|s| s["protocol"] == "tcp"));
+
+    // --exposed drops exactly the loopback group.
+    let (_, stdout) = run(&["listen", "--json", "--exposed"]);
+    let report: Value = serde_json::from_str(&stdout).unwrap();
+    assert!(report["sockets"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|s| s["exposure"] != "loopback"));
+    assert_eq!(report["socket_summary"]["loopback"], 0);
+}
+
+#[test]
 fn pretty_requires_json() {
     let output = Command::new(env!("CARGO_BIN_EXE_netinspect"))
         .arg("--pretty")

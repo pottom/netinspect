@@ -400,6 +400,18 @@ pub struct ProcessInfo {
     pub user: Option<String>,
 }
 
+/// The `listen` subcommand's own top-level object, sharing the report's
+/// envelope.
+#[derive(Debug, Clone, Serialize)]
+pub struct ListenReport {
+    pub schema: u32,
+    pub version: String,
+    pub timestamp: String,
+    pub sockets: Vec<SocketEntry>,
+    pub socket_summary: SocketSummary,
+    pub firewall: FirewallState,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct SocketSummary {
     pub total: usize,

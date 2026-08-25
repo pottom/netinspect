@@ -7,4 +7,5 @@
 //!
 //! See `src/parse/AGENTS.md`.
 
+pub mod pcb;
 pub mod rt_msg;

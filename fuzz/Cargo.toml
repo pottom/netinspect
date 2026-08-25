@@ -23,3 +23,10 @@ path = "fuzz_targets/rt_msg.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "pcb"
+path = "fuzz_targets/pcb.rs"
+test = false
+doc = false
+bench = false

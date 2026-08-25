@@ -56,6 +56,22 @@ The ladder is a best-effort improvement over a guaranteed blank, not a fix.
 Apple has closed each of these paths in turn and is likely to close the
 remainder; everything here is written to degrade quietly when that happens.
 
+## Sockets: two sources, in this order
+
+`pcblist_n` is the primary source because it is **complete without
+privileges** — every socket on the system, including other users'. `libproc`
+adds process names, and can only ever see this user's processes.
+
+So: enumerate from the pcb list, enrich from libproc, and report a socket with
+no owner rather than omitting it. `join` is a pure function and its most
+important test is the one where the owners map is empty, because that is what
+an unprivileged run against system services looks like. On the machine this was
+built on it finds eleven listeners `lsof` cannot see.
+
+Every libproc failure is silent and partial by design: a process that exited
+between the listing and the lookup, or one this user may not inspect,
+contributes nothing and must never take the socket list down with it.
+
 ## Work Guidance
 
 `getifaddrs` is shared with Linux verbatim — keep it that way. Everything

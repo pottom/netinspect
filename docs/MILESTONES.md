@@ -114,14 +114,20 @@ Only one machine was available to capture from, so the fixtures are one tunnel
 state rather than the three the specification asks for. The unit tests build
 the shapes a capture could not supply.
 
-## M6 — `listen` and the firewall footer
+## M6 — `listen` and the firewall footer ✅
 
-- [ ] `parse/pcb.rs`: a pure walker over `pcblist_n`, landing before the
-      `libproc` enrichment so the socket list is always complete if anonymous
-- [ ] `libproc` attribution, with the join tested for the unprivileged case
-      where it returns nothing at all
-- [ ] Exposure classification and the `unattributed` count
-- [ ] Fuzz target
+- [x] `parse/pcb.rs`: a pure walker over `pcblist_n`, landed before the
+      `libproc` enrichment so the socket list is complete whoever runs it
+- [x] `libproc` attribution joined on the kernel's own socket handle, with the
+      join tested for the unprivileged case where it returns nothing at all
+- [x] Exposure classification, most exposed first, and the `unattributed` count
+- [x] Rendering per the design reference, including the deliberately hedged
+      firewall footer and the `sudo` line that fixes the missing names
+- [x] `--tcp`/`--udp`, `--exposed`, `--port`, `--resolve`, `--all`, `--json`
+- [x] Two committed fixtures with addresses and uids rewritten, every
+      truncation, 4000 corrupted variants, and a `cargo-fuzz` target
+- [x] Output compared against `lsof` row for row: a strict superset, with
+      eleven root-owned listeners `lsof` cannot see unprivileged
 
 ## M7 — `--watch`
 

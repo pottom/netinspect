@@ -6,11 +6,12 @@ use clap::Parser;
 
 use netinspect::cli::{self, Cli, Command};
 use netinspect::model::{
-    DnsConfig, Interface, PublicAddress, Reachability, RoutesReport, Snapshot, SCHEMA,
+    DnsConfig, Exposure, Interface, ListenReport, PublicAddress, Reachability, RoutesReport,
+    SocketFilter, Snapshot, SCHEMA,
 };
 use netinspect::probe::{self, net::Net, Ladder};
 use netinspect::public::{self, cache};
-use netinspect::render::{human, json, routes as render_routes};
+use netinspect::render::{human, json, listen as render_listen, routes as render_routes};
 use netinspect::sys;
 
 fn main() -> ExitCode {
@@ -36,6 +37,26 @@ fn run() -> Result<ExitCode> {
 
     if let Some(Command::Routes { iface }) = &cli.command {
         return routes(&cli, platform.as_ref(), &interfaces, iface.as_deref());
+    }
+    if let Some(Command::Listen {
+        tcp,
+        udp,
+        exposed,
+        port,
+        resolve,
+    }) = &cli.command
+    {
+        return listen(
+            &cli,
+            platform.as_ref(),
+            ListenOptions {
+                tcp: *tcp,
+                udp: *udp,
+                exposed: *exposed,
+                port: *port,
+                resolve: *resolve,
+            },
+        );
     }
 
     let measured = if cli.probes_enabled() {
@@ -115,6 +136,75 @@ fn routes(
             &render_routes::Options {
                 theme: cli.theme(),
                 edge: cli.content_edge(),
+            },
+        )
+        .trim_end()
+        .to_owned()
+    };
+    println!("{text}");
+    Ok(ExitCode::SUCCESS)
+}
+
+struct ListenOptions {
+    tcp: bool,
+    udp: bool,
+    exposed: bool,
+    port: Option<u16>,
+    resolve: bool,
+}
+
+fn listen(cli: &Cli, platform: &dyn sys::Platform, options: ListenOptions) -> Result<ExitCode> {
+    // Neither flag means both; the two together are rejected by clap.
+    let both = !options.tcp && !options.udp;
+    let mut table = platform.sockets(SocketFilter {
+        tcp: both || options.tcp,
+        udp: both || options.udp,
+        include_established: cli.all,
+    })?;
+
+    table.sockets.retain(|socket| {
+        options.port.is_none_or(|port| socket.port == port)
+            && (!options.exposed || socket.exposure != Exposure::Loopback)
+    });
+    // The summary describes what is shown.
+    let count = |exposure: Exposure| {
+        table
+            .sockets
+            .iter()
+            .filter(|s| s.exposure == exposure)
+            .count()
+    };
+    table.summary = netinspect::model::SocketSummary {
+        total: table.sockets.len(),
+        wildcard: count(Exposure::Wildcard),
+        loopback: count(Exposure::Loopback),
+        interface: count(Exposure::Interface),
+        unattributed: table.sockets.iter().filter(|s| s.process.is_none()).count(),
+    };
+
+    let firewall = platform.firewall()?;
+
+    let text = if cli.json {
+        json::emit(
+            &ListenReport {
+                schema: SCHEMA,
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+                timestamp: now(),
+                sockets: table.sockets,
+                socket_summary: table.summary,
+                firewall,
+            },
+            cli.pretty,
+        )?
+    } else {
+        render_listen::render(
+            &table,
+            firewall,
+            &render_listen::Options {
+                theme: cli.theme(),
+                edge: cli.content_edge(),
+                current_uid: Some(sys::current_uid()),
+                resolve: options.resolve,
             },
         )
         .trim_end()
