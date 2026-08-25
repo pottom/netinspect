@@ -69,6 +69,10 @@ pub struct Cli {
           value_parser = ["dark", "dark-warm", "light", "light-warm"])]
     pub theme: Option<String>,
 
+    /// Skip the public-address lookup. No outbound request for geo
+    #[arg(long, global = true)]
+    pub no_lookup: bool,
+
     /// Skip the reachability probes
     #[arg(long, global = true)]
     pub no_check: bool,
@@ -96,6 +100,14 @@ impl Cli {
     /// Whether the reachability ladder should run at all.
     pub fn probes_enabled(&self) -> bool {
         matches!(self.command, Some(Command::Check)) || !self.no_check
+    }
+
+    /// Whether this run may tell the provider anything. `check` never does:
+    /// it answers from the exit code and has no use for a location.
+    pub fn lookup_enabled(&self) -> bool {
+        !self.no_lookup
+            && !matches!(self.command, Some(Command::Check))
+            && !crate::public::lookup_disabled()
     }
 
     pub fn probe_timeout(&self) -> std::time::Duration {
@@ -173,6 +185,7 @@ impl Cli {
             ipv4_only: self.ipv4_only,
             ipv6_only: self.ipv6_only,
             only_interface: self.interface.clone(),
+            system_timezone: system_timezone(),
             edge: None,
         }
     }
@@ -240,6 +253,13 @@ fn palette_for_background(r: u8, g: u8, b: u8) -> Palette {
         (false, false) => Palette::Light,
         (false, true) => Palette::LightWarm,
     }
+}
+
+/// The machine's own IANA zone, when it has a name. A fixed offset does not.
+pub fn system_timezone() -> Option<String> {
+    jiff::tz::TimeZone::system()
+        .iana_name()
+        .map(str::to_owned)
 }
 
 fn env_flag(name: &str) -> bool {
@@ -322,6 +342,15 @@ mod tests {
         let cli = Cli::parse_from(["netinspect", "check"]);
         assert!(matches!(cli.command, Some(Command::Check)));
         assert_eq!(cli.interface, None);
+    }
+
+    #[test]
+    fn check_never_reaches_the_provider() {
+        // It answers through an exit code; a location would be a disclosure
+        // with nothing asking for it.
+        assert!(!Cli::parse_from(["netinspect", "check"]).lookup_enabled());
+        assert!(Cli::parse_from(["netinspect"]).lookup_enabled());
+        assert!(!Cli::parse_from(["netinspect", "--no-lookup"]).lookup_enabled());
     }
 
     #[test]

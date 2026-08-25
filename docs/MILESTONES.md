@@ -84,13 +84,18 @@ Landed out of band, after the report was seen on a wide terminal.
 - [x] Asserted at every width from 38 to 200: nothing overruns the edge it
       settled on, and the paired timings stay under their stage names
 
-## M4 — Public address, cache, timezone, VPN correlation
+## M4 — Public address, cache, timezone, VPN correlation ✅
 
-- [ ] `ipinfo.io` lookup with a plain-IP fallback on 429
-- [ ] `geo.json` cache: 15-minute TTL, gateway/VPN fingerprint invalidation,
-      mode 0600
-- [ ] Timezone comparison against the system clock
-- [ ] VPN correlation, including the leak warning
+- [x] `ipinfo.io` lookup, cancelled if the ladder does not end online, with a
+      fallback to the same provider's plain-address endpoint on a rate limit
+- [x] `geo.json` cache: 15-minute TTL, fingerprint invalidation on a changed
+      route out, mode 0600 set at creation and re-set on rewrite
+- [x] Timezone comparison, stated only when both zones are known
+- [x] VPN correlation against a baseline recorded with no tunnel up — and
+      `None` whenever there is no baseline to compare against, which is most
+      of the time and is the honest answer
+- [x] `--no-lookup`, `NETINSPECT_NO_LOOKUP`, `NETINSPECT_GEO_ENDPOINT`, and
+      `check` never looking up at all
 
 ## M5 — `routes`
 

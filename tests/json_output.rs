@@ -24,15 +24,18 @@ fn run(args: &[&str]) -> (bool, String) {
     )
 }
 
+/// The shared report deliberately passes `--no-lookup`: these tests should not
+/// tell a third party about the machine running them once per assertion, and
+/// the lookup path has its own test below.
 fn report() -> Value {
-    let (ok, stdout) = run(&["--json"]);
+    let (ok, stdout) = run(&["--json", "--no-lookup"]);
     assert!(ok, "netinspect --json exited with a failure");
     serde_json::from_str(&stdout).expect("--json must emit valid JSON")
 }
 
 #[test]
 fn json_is_a_single_line_of_valid_json() {
-    let (_, stdout) = run(&["--json"]);
+    let (_, stdout) = run(&["--json", "--no-lookup"]);
     assert_eq!(stdout.trim_end().lines().count(), 1);
     serde_json::from_str::<Value>(&stdout).expect("valid JSON");
 }
@@ -186,8 +189,77 @@ fn check_prints_nothing_and_reports_through_its_exit_code() {
 
 #[test]
 fn json_implies_no_color() {
-    let (_, stdout) = run(&["--json"]);
+    let (_, stdout) = run(&["--json", "--no-lookup"]);
     assert!(!stdout.contains('\x1b'));
+}
+
+#[test]
+fn no_lookup_means_no_public_address_at_all() {
+    let report = report();
+    // Not a half-filled object — the question was never asked.
+    assert!(report["public"].is_null(), "{}", report["public"]);
+}
+
+/// The lookup path, tolerant of a machine with no internet: what it must not do
+/// is invent a field or half-fill the object.
+#[test]
+fn a_public_address_is_either_absent_or_coherent() {
+    let (ok, stdout) = run(&["--json"]);
+    assert!(ok);
+    let report: Value = serde_json::from_str(&stdout).expect("valid JSON");
+    let public = &report["public"];
+    if public.is_null() {
+        return; // offline, or the provider did not answer
+    }
+
+    // At least one address family, and each in the field for its family.
+    let v4 = public["ipv4"].as_str();
+    let v6 = public["ipv6"].as_str();
+    assert!(v4.is_some() || v6.is_some(), "{public}");
+    if let Some(address) = v4 {
+        assert!(address.parse::<std::net::Ipv4Addr>().is_ok(), "{address}");
+    }
+    if let Some(address) = v6 {
+        assert!(address.parse::<std::net::Ipv6Addr>().is_ok(), "{address}");
+    }
+
+    // Numbers are numbers.
+    for key in ["latitude", "longitude"] {
+        assert!(public[key].is_f64() || public[key].is_null(), "{key}: {public}");
+    }
+
+    // The tunnel verdict is only stated when there was something to compare
+    // against; it must never be a guess dressed as a boolean.
+    assert!(
+        public["via_vpn"].is_boolean() || public["via_vpn"].is_null(),
+        "{public}"
+    );
+    // And the timezone comparison only when both zones are known.
+    if public["timezone"].is_null() {
+        assert!(public["timezone_matches_system"].is_null(), "{public}");
+    }
+}
+
+#[test]
+fn check_makes_no_geo_request_even_without_no_lookup() {
+    // `check` answers through an exit code; a location would be a disclosure
+    // with nothing asking for it. Point the cache somewhere empty and assert
+    // nothing was written there.
+    let directory = std::env::temp_dir().join(format!("netinspect-check-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&directory);
+
+    let status = Command::new(env!("CARGO_BIN_EXE_netinspect"))
+        .arg("check")
+        .env("NETINSPECT_CACHE_DIR", &directory)
+        .status()
+        .expect("runnable");
+    assert!([0, 10, 11, 12, 13].contains(&status.code().unwrap()));
+    assert!(
+        !directory.join("geo.json").exists(),
+        "check wrote a geo cache, so it made a lookup"
+    );
+
+    let _ = std::fs::remove_dir_all(&directory);
 }
 
 #[test]

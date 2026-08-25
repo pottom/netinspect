@@ -8,5 +8,6 @@
 pub mod cli;
 pub mod model;
 pub mod probe;
+pub mod public;
 pub mod render;
 pub mod sys;

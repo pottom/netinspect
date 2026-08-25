@@ -8,8 +8,8 @@
 //! shape of report is reachable from a test.
 
 use crate::model::{
-    AddressSource, DnsConfig, Interface, InterfaceKind, InterfaceStatus, Ipv6Scope, Reachability,
-    ReachabilityState, Snapshot, WifiDetail,
+    AddressSource, DnsConfig, Interface, InterfaceKind, InterfaceStatus, Ipv6Scope, PublicAddress,
+    Reachability, ReachabilityState, Snapshot, WifiDetail,
 };
 
 use super::layout::{
@@ -33,6 +33,9 @@ pub struct Options {
     pub ipv6_only: bool,
     /// Restrict the interface section to one interface.
     pub only_interface: Option<String>,
+    /// The machine's own IANA time zone, for the comparison against where the
+    /// public address says it is.
+    pub system_timezone: Option<String>,
     /// Force the content edge, for rendering a block into one of two columns.
     /// `None` derives it from `width`, which is what every caller outside the
     /// renderer wants.
@@ -680,41 +683,153 @@ fn duration(seconds: u64) -> String {
 /// terminal empty. Pairing them is what actually spends the extra columns:
 /// widening a row that is already short spends nothing.
 fn sections(out: &mut Vec<String>, snapshot: &Snapshot, options: &Options) {
+    let mut blocks: Vec<Vec<String>> = Vec::new();
+
     let mut dns = Vec::new();
     dns_section(&mut dns, &snapshot.dns, options);
+    blocks.push(dns);
 
-    let Some(reachability) = &snapshot.reachability else {
-        out.extend(dns);
+    if let Some(reachability) = &snapshot.reachability {
+        let mut ladder = Vec::new();
+        reachability_section(&mut ladder, reachability, options);
+        blocks.push(ladder);
+    }
+    if let Some(public) = &snapshot.public {
+        let mut block = Vec::new();
+        public_section(&mut block, public, options);
+        blocks.push(block);
+    }
+
+    if options.narrow() {
+        out.extend(blocks.into_iter().flatten());
         return;
-    };
-    let mut ladder = Vec::new();
-    reachability_section(&mut ladder, reachability, options);
+    }
+    out.extend(pack(blocks, options.edge()));
+}
 
-    // Neither block right-aligns anything, so both are exactly as wide as
-    // their content. Pack them against each other rather than splitting the
-    // terminal in half: a fixed half-width column would leave a gap on one
-    // side and wrap the other.
+/// Place the short sections next to each other while they fit.
+///
+/// None of them right-aligns anything, so each is exactly as wide as its own
+/// content and they can be packed against one another. A fixed half-width
+/// column would leave a gap beside the narrow ones and wrap the wide ones.
+fn pack(blocks: Vec<Vec<String>>, edge: usize) -> Vec<String> {
     let width = |block: &[String]| block.iter().map(|l| visible_width(l)).max().unwrap_or(0);
-    let left = width(&dns);
-    let right = width(&ladder);
 
-    if options.narrow() || left + GUTTER + right > options.edge() {
-        out.extend(dns);
-        out.extend(ladder);
-        return;
+    let mut out: Vec<String> = Vec::new();
+    let mut row: Vec<String> = Vec::new();
+    let mut row_width = 0;
+
+    for block in blocks {
+        // Every block opens with the blank line separating it from what came
+        // before. Strip it from all of them and emit one per row: left on a
+        // block that joins a row it would push that block's title a line above
+        // its neighbour's.
+        let mut block = block;
+        let leading_blank = block.first().is_some_and(|line| line.trim().is_empty());
+        if leading_blank {
+            block.remove(0);
+        }
+        let block_width = width(&block);
+
+        if row.is_empty() {
+            if leading_blank {
+                out.push(String::new());
+            }
+            row_width = block_width;
+            row = block;
+        } else if row_width + GUTTER + block_width <= edge {
+            row = columns(row, block, row_width + GUTTER + 1);
+            row_width += GUTTER + block_width;
+        } else {
+            out.append(&mut row);
+            if leading_blank {
+                out.push(String::new());
+            }
+            row_width = block_width;
+            row = block;
+        }
+    }
+    out.append(&mut row);
+    out
+}
+
+// ---------------------------------------------------------------------------
+// Public address
+// ---------------------------------------------------------------------------
+
+fn public_section(out: &mut Vec<String>, public: &PublicAddress, options: &Options) {
+    out.push(String::new());
+    out.push(section(&options.theme, "public address"));
+
+    for (label, address) in [("ipv4", &public.ipv4), ("ipv6", &public.ipv6)] {
+        let Some(address) = address else { continue };
+        let mut row = Row::new(label, vec![(Role::Public, address.clone())]);
+        // Whether the tunnel is actually carrying this traffic is the loudest
+        // thing on the page when the answer is no.
+        row.annotation = match public.via_vpn {
+            Some(true) => Some(vec![(Role::Ok, "via VPN".to_owned())]),
+            Some(false) => Some(vec![(Role::Fail, "not routed through VPN".to_owned())]),
+            None => None,
+        };
+        emit_row(out, options, &row, Rail::None);
     }
 
-    // Both open with the blank line that separates them from what came before;
-    // the second one's would leave a hole in the middle of the row.
-    if ladder.first().is_some_and(|line| line.trim().is_empty()) {
-        ladder.remove(0);
-    }
-    if dns.first().is_some_and(|line| line.trim().is_empty()) {
-        out.push(String::new());
-        dns.remove(0);
+    if let Some(org) = &public.org {
+        let mut row = Row::new("network", vec![(Role::Bright, org.clone())]);
+        if let Some(asn) = &public.asn {
+            row = row.annotate(asn.clone());
+        }
+        emit_row(out, options, &row, Rail::None);
     }
 
-    out.extend(columns(dns, ladder, left + GUTTER + 1));
+    if let Some(place) = place(public) {
+        let mut row = Row::new("location", vec![(Role::Body, place)]);
+        if let Some(coordinates) = coordinates(public) {
+            row = row.annotate(coordinates);
+        }
+        emit_row(out, options, &row, Rail::None);
+    }
+
+    if let Some(timezone) = &public.timezone {
+        let mut row = Row::new("timezone", vec![(Role::Body, timezone.clone())]);
+        // A mismatch has no reach, no probe outcome and nothing to run, so it
+        // gets weight rather than a colour. It is also the normal state with a
+        // tunnel up, and exactly the signal people run this tool to see.
+        row.annotation = match (public.timezone_matches_system, &options.system_timezone) {
+            (Some(true), _) => Some(vec![(Role::Faint, "matches the system clock".to_owned())]),
+            (Some(false), Some(ours)) => {
+                Some(vec![(Role::Bright, format!("system clock is {ours}"))])
+            }
+            (Some(false), None) => {
+                Some(vec![(Role::Bright, "the system clock differs".to_owned())])
+            }
+            (None, _) => None,
+        };
+        emit_row(out, options, &row, Rail::None);
+    }
+}
+
+/// `Budapest, HU`. The provider reports an ISO country code and this does not
+/// carry a table to turn it into a name.
+fn place(public: &PublicAddress) -> Option<String> {
+    match (&public.city, &public.country) {
+        (Some(city), Some(country)) => Some(format!("{city}, {country}")),
+        (Some(city), None) => Some(city.clone()),
+        (None, Some(country)) => Some(country.clone()),
+        (None, None) => None,
+    }
+}
+
+/// Three decimals is about a hundred metres, which is finer than a city-level
+/// lookup can actually resolve. Printing more would imply a precision the
+/// number does not have.
+fn coordinates(public: &PublicAddress) -> Option<String> {
+    let (latitude, longitude) = (public.latitude?, public.longitude?);
+    let mut text = format!("{latitude:.3}, {longitude:.3}");
+    if let Some(accuracy) = public.accuracy_km {
+        text.push_str(&format!(" ±{accuracy} km"));
+    }
+    Some(text)
 }
 
 // ---------------------------------------------------------------------------

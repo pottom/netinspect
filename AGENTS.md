@@ -99,6 +99,8 @@ cargo run -- --json | jq .
     and what current macOS no longer exposes.
 - `src/probe/AGENTS.md` — the reachability ladder and its budget.
   Owns `src/probe/**`.
+- `src/public/AGENTS.md` — the public-address lookup, the only part of the tool
+  that tells a third party anything. Owns `src/public/**`.
 - `src/render/AGENTS.md` — layout, colour, glyphs and output formats.
 
 Root-owned: `src/lib.rs`, `src/main.rs`, `src/cli.rs`, `src/model.rs`,

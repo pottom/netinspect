@@ -17,6 +17,7 @@ fn options(width: usize) -> Options {
         ipv4_only: false,
         ipv6_only: false,
         only_interface: None,
+        system_timezone: Some("Europe/Budapest".to_owned()),
         edge: None,
     }
 }
@@ -243,6 +244,131 @@ fn a_filtered_web_is_online_with_a_different_explanation() {
     let rendered = human::render(&snapshot, &options(80));
     assert!(rendered.contains("online"), "{rendered}");
     assert!(rendered.contains("filtered"), "{rendered}");
+}
+
+fn public_address() -> PublicAddress {
+    PublicAddress {
+        ipv4: Some("84.21.7.113".to_owned()),
+        ipv6: None,
+        asn: Some("AS5483".to_owned()),
+        org: Some("Magyar Telekom".to_owned()),
+        city: Some("Budapest".to_owned()),
+        region: Some("Budapest".to_owned()),
+        country: Some("HU".to_owned()),
+        latitude: Some(47.4980),
+        longitude: Some(19.0400),
+        accuracy_km: None,
+        timezone: Some("Europe/Budapest".to_owned()),
+        timezone_matches_system: Some(true),
+        via_vpn: None,
+        cached_at: Some("2026-08-25T14:19:02+02:00".to_owned()),
+    }
+}
+
+#[test]
+fn public_address_section() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(online());
+    snapshot.public = Some(public_address());
+    insta::assert_snapshot!(human::render(&snapshot, &options(100)));
+}
+
+/// The loudest thing the report can say. A tunnel is up and the traffic is not
+/// going through it.
+#[test]
+fn a_vpn_leak_is_named_on_the_address_it_concerns() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(online());
+    snapshot.public = Some(PublicAddress {
+        via_vpn: Some(false),
+        ..public_address()
+    });
+    let rendered = human::render(&snapshot, &options(100));
+    assert!(rendered.contains("not routed through VPN"), "{rendered}");
+    insta::assert_snapshot!(rendered);
+}
+
+#[test]
+fn a_working_tunnel_says_so_on_the_same_row() {
+    let mut snapshot = full();
+    snapshot.public = Some(PublicAddress {
+        via_vpn: Some(true),
+        ..public_address()
+    });
+    let rendered = human::render(&snapshot, &options(100));
+    let row = rendered.lines().find(|l| l.contains("84.21.7.113")).unwrap();
+    assert!(row.contains("via VPN"), "{row:?}");
+}
+
+/// Nothing is claimed without evidence: with no record of this machine without
+/// a tunnel there is nothing to compare against, so the row says nothing.
+#[test]
+fn without_a_baseline_the_address_row_carries_no_verdict() {
+    let mut snapshot = full();
+    snapshot.public = Some(public_address());
+    let rendered = human::render(&snapshot, &options(100));
+    let row = rendered.lines().find(|l| l.contains("84.21.7.113")).unwrap();
+    assert!(!row.contains("VPN"), "{row:?}");
+}
+
+#[test]
+fn a_timezone_mismatch_names_the_system_clock() {
+    let mut snapshot = full();
+    snapshot.public = Some(PublicAddress {
+        timezone: Some("America/New_York".to_owned()),
+        timezone_matches_system: Some(false),
+        ..public_address()
+    });
+    let rendered = human::render(&snapshot, &options(100));
+    assert!(rendered.contains("system clock is Europe/Budapest"), "{rendered}");
+}
+
+/// A provider that stops returning a field must not take the section down with
+/// it: every row is independent.
+#[test]
+fn an_address_with_nothing_else_still_renders() {
+    let mut snapshot = full();
+    snapshot.public = Some(PublicAddress {
+        asn: None,
+        org: None,
+        city: None,
+        region: None,
+        country: None,
+        latitude: None,
+        longitude: None,
+        timezone: None,
+        timezone_matches_system: None,
+        ..public_address()
+    });
+    let rendered = human::render(&snapshot, &options(100));
+    assert!(rendered.contains("PUBLIC ADDRESS"), "{rendered}");
+    assert!(rendered.contains("84.21.7.113"), "{rendered}");
+    for absent in ["network", "location", "timezone"] {
+        assert!(
+            !rendered.contains(&format!("    {absent}")),
+            "{absent} row should be omitted:\n{rendered}"
+        );
+    }
+}
+
+/// Section titles have to line up when two blocks share a row.
+#[test]
+fn packed_section_titles_share_a_line() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(online());
+    snapshot.public = Some(public_address());
+    let rendered = human::render(&snapshot, &options(120));
+
+    let titles = rendered
+        .lines()
+        .find(|l| l.contains("DNS") && l.contains("REACHABILITY"))
+        .expect("DNS and REACHABILITY share a row");
+    // And the row above them is blank, not a title pushed a line high.
+    let index = rendered.lines().position(|l| l == titles).unwrap();
+    assert!(
+        rendered.lines().nth(index - 1).is_some_and(|l| l.trim().is_empty()),
+        "{rendered}"
+    );
 }
 
 #[test]

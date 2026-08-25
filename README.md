@@ -134,7 +134,19 @@ traffic already accepted by a listening system service.
 
 The public-address lookup sends this machine's IP to ipinfo.io
 ([privacy policy](https://ipinfo.io/privacy)). Disable it with `--no-lookup` or
-`NETINSPECT_NO_LOOKUP=1`.
+`NETINSPECT_NO_LOOKUP=1`, or point it elsewhere with `NETINSPECT_GEO_ENDPOINT`.
+
+It is one provider and one request. The answer is cached for fifteen minutes, so
+a repeated run discloses nothing; the request is cancelled outright if the
+reachability ladder does not end online; and `check` never makes it at all. On a
+rate limit the fallback is the same provider's plain-address endpoint rather
+than a second company.
+
+netinspect will tell you whether a VPN is actually carrying your traffic, but
+only when it can prove it: that needs a record of what this machine looks like
+with no tunnel up, which the cache keeps. Until it has one, the row says
+nothing. A guess here would either raise a false alarm or quietly reassure
+someone whose traffic is leaking.
 
 `--no-lookup` does **not** disable the update check; that is
 `NETINSPECT_NO_UPDATE_CHECK=1`.

@@ -1,11 +1,13 @@
 use std::process::ExitCode;
+use std::sync::Arc;
 
 use anyhow::Result;
 use clap::Parser;
 
-use netinspect::cli::{Cli, Command};
-use netinspect::model::{Reachability, Snapshot, SCHEMA};
+use netinspect::cli::{self, Cli, Command};
+use netinspect::model::{DnsConfig, Interface, PublicAddress, Reachability, Snapshot, SCHEMA};
 use netinspect::probe::{self, net::Net, Ladder};
+use netinspect::public::{self, cache};
 use netinspect::render::{human, json};
 use netinspect::sys;
 
@@ -30,15 +32,20 @@ fn run() -> Result<ExitCode> {
     let interfaces = platform.interfaces()?;
     let dns = platform.dns_config()?;
 
-    let reachability = if cli.probes_enabled() {
+    let measured = if cli.probes_enabled() {
         Some(measure(&cli, &interfaces, &dns)?)
     } else {
         None
     };
 
     if matches!(cli.command, Some(Command::Check)) {
-        return Ok(check(&cli, reachability.as_ref()));
+        return Ok(check(&cli, measured.as_ref().map(|m| &m.0)));
     }
+
+    let (reachability, public) = match measured {
+        Some((reachability, public)) => (Some(reachability), public),
+        None => (None, None),
+    };
 
     let snapshot = Snapshot {
         schema: SCHEMA,
@@ -47,7 +54,7 @@ fn run() -> Result<ExitCode> {
         interfaces,
         dns,
         reachability,
-        public: None,
+        public,
         update: None,
     };
 
@@ -65,31 +72,119 @@ fn run() -> Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
+/// Run the ladder, and the public lookup alongside it.
+///
+/// The lookup starts first and is *cancelled* if the ladder does not end
+/// online: on a broken network its answer would be stale or absent anyway, and
+/// there is no reason to keep telling a third party about a machine whose
+/// report will not use the reply.
 fn measure(
     cli: &Cli,
-    interfaces: &[netinspect::model::Interface],
-    dns: &netinspect::model::DnsConfig,
-) -> Result<Reachability> {
-    let net = Net::new()?;
-    let ladder = Ladder {
-        connector: &net,
-        resolver: &net,
-        http: &net,
-        timeout: cli.probe_timeout(),
-    };
-
+    interfaces: &[Interface],
+    dns: &DnsConfig,
+) -> Result<(Reachability, Option<PublicAddress>)> {
+    let net = Arc::new(Net::new()?);
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
+
+    let directory = cache::directory();
+    let fingerprint = public::fingerprint(interfaces);
+    let vpn_active = public::vpn_active(interfaces);
+    let stored = directory.as_deref().and_then(cache::load);
+    let now_unix = jiff::Timestamp::now().as_second();
+
+    // A fresh cached answer means this run tells the provider nothing at all.
+    let cached = stored
+        .as_ref()
+        .filter(|cache| cli.lookup_enabled() && cache::is_fresh(cache, &fingerprint, now_unix));
+    if cli.verbose {
+        eprintln!(
+            "netinspect: geo cache {}",
+            match (&cached, cli.lookup_enabled()) {
+                (Some(cache), _) => format!("hit, {}s old", now_unix - cache.fetched_at_unix),
+                (None, true) => "miss".to_owned(),
+                (None, false) => "not consulted, lookup disabled".to_owned(),
+            }
+        );
+    }
+
+    let pending = match (cli.lookup_enabled(), cached.is_some()) {
+        (true, false) => {
+            let net = Arc::clone(&net);
+            let endpoint = public::endpoint();
+            let timeout = cli.probe_timeout();
+            Some(runtime.spawn(async move {
+                public::lookup(net.as_ref(), &endpoint, timeout).await
+            }))
+        }
+        _ => None,
+    };
+
+    let ladder = Ladder {
+        connector: net.as_ref(),
+        resolver: net.as_ref(),
+        http: net.as_ref(),
+        timeout: cli.probe_timeout(),
+    };
     let started = std::time::Instant::now();
-    let report = runtime.block_on(ladder.run(interfaces, dns));
+    let reachability = runtime.block_on(ladder.run(interfaces, dns));
     if cli.verbose {
         eprintln!(
             "netinspect: reachability ladder finished in {} ms",
             started.elapsed().as_millis()
         );
     }
-    Ok(report)
+
+    let online = reachability.state == netinspect::model::ReachabilityState::Online;
+    let observation = match (cached, pending) {
+        (Some(cache), _) => Some((cache.observation.clone(), cache.fetched_at_unix)),
+        (None, Some(task)) if online => runtime
+            .block_on(task)
+            .ok()
+            .flatten()
+            .map(|observed| (observed, now_unix)),
+        (None, Some(task)) => {
+            task.abort();
+            None
+        }
+        (None, None) => None,
+    };
+
+    let Some((observation, fetched_at_unix)) = observation else {
+        return Ok((reachability, None));
+    };
+
+    let baseline = cache::baseline_after(
+        stored.as_ref().and_then(|cache| cache.baseline.clone()),
+        &observation,
+        vpn_active,
+        fetched_at_unix,
+    );
+    let public = public::assemble(
+        &observation,
+        baseline.as_ref(),
+        cli::system_timezone().as_deref(),
+        vpn_active,
+        Some(local_time(fetched_at_unix)),
+    );
+
+    if let Some(directory) = &directory {
+        let record = cache::Cache {
+            schema: 1,
+            fingerprint,
+            fetched_at_unix,
+            observation,
+            baseline,
+        };
+        if let Err(error) = cache::store(directory, &record) {
+            if cli.verbose {
+                eprintln!("netinspect: could not write the geo cache: {error}");
+            }
+        }
+    }
+
+    Ok((reachability, Some(public)))
 }
 
 /// `check` exists for scripting and shell prompts: silence is the success
@@ -134,6 +229,18 @@ fn now() -> String {
     jiff::Zoned::now()
         .strftime("%Y-%m-%dT%H:%M:%S%:z")
         .to_string()
+}
+
+/// A past instant as local RFC 3339, for the cache stamp in `--json`.
+fn local_time(unix: i64) -> String {
+    jiff::Timestamp::from_second(unix)
+        .map(|stamp| {
+            stamp
+                .to_zoned(jiff::tz::TimeZone::system())
+                .strftime("%Y-%m-%dT%H:%M:%S%:z")
+                .to_string()
+        })
+        .unwrap_or_else(|_| now())
 }
 
 /// The header's local time, with the zone abbreviation the RFC 3339 stamp in
