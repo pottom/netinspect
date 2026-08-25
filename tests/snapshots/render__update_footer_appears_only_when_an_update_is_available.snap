@@ -2,7 +2,7 @@
 source: tests/render.rs
 expression: "human::render(&snapshot, &options(80))"
 ---
-  netinspect 0.3.1                                               14:22:07 CEST
+  netinspect v0.3.1                                              14:22:07 CEST
   ────────────────────────────────────────────────────────────────────────────
 
   ▌ Wi-Fi · en0                                                    [connected]
@@ -25,4 +25,4 @@ expression: "human::render(&snapshot, &options(80))"
     proxy       none
 
   ────────────────────────────────────────────────────────────────────────────
-  ↑ 0.4.0 available                                   $ netinspect self-update
+  ↑ v0.4.0 available                                       $ netinspect update

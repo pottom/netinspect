@@ -44,7 +44,11 @@ fn json_is_a_single_line_of_valid_json() {
 fn envelope_matches_schema_1() {
     let report = report();
     assert_eq!(report["schema"], 1, "schema 1 is frozen; see docs/MILESTONES.md");
-    assert!(report["version"].is_string());
+    // A bare semver: the `v` is for the human report, and a script comparing
+    // versions should not have to strip it.
+    let version = report["version"].as_str().expect("a version");
+    assert!(!version.starts_with('v'), "{version}");
+    assert!(version.starts_with(char::is_numeric), "{version}");
 
     let timestamp = report["timestamp"].as_str().expect("timestamp is a string");
     // RFC 3339 with an offset, e.g. 2026-08-25T14:22:07+02:00.

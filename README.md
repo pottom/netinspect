@@ -4,7 +4,7 @@ Read-only network diagnostics for macOS, in one binary.
 
 ```
 $ netinspect
-  netinspect 0.1.0                               21:05:58 CEST
+  netinspect v0.1.0                              21:05:58 CEST
   ────────────────────────────────────────────────────────────
 
   ▌ Wi-Fi en0                                        connected

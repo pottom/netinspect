@@ -17,7 +17,7 @@ reporting.";
 #[derive(Debug, Parser)]
 #[command(
     name = "netinspect",
-    version,
+    version = concat!("v", env!("CARGO_PKG_VERSION")),
     about = "Read-only network diagnostics: configuration, reachability, public address",
     after_help = GEO_PROVIDER_NOTE
 )]

@@ -51,7 +51,7 @@ Eleven roles. Anything not on this list is a bug.
 | `local` | reachable only from this machine | `127.0.0.0/8`, `::1`, loopback sockets |
 | `lan` | reachable from this network | RFC1918, CGNAT, link-local, `fe80::`, multicast, VPN inner addresses |
 | `public` | reachable from, or belonging to, the open internet | public IPs, `0.0.0.0`, `[::]`, DNS resolvers, VPN endpoints, `firewall: off`, `captive portal` |
-| `action` | copyable and runnable | login URLs, `netinspect self-update`, `sudo netinspect listen` |
+| `action` | copyable and runnable | login URLs, `netinspect update`, `sudo netinspect listen` |
 
 ### 2.1 Classifying an address
 
@@ -337,6 +337,9 @@ right-alignment, no rules. Below 40: the same, and drop the rail.
 
 ## 7. Copywriting
 
+- A version shown to a person carries a `v` — `v0.1.0` — and the one in
+  `--json` does not. A script comparing versions should not have to strip a
+  prefix, and a reader should not have to wonder whether `0.1.0` is a version.
 - Lowercase labels, always. Uppercase only for section titles and acronyms
   that are genuinely uppercase (DNS, VPN, TLS, ASN).
 - No punctuation at the end of a row.

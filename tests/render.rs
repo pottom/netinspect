@@ -380,17 +380,38 @@ fn a_carried_public_address_says_its_age() {
     snapshot.public = Some(public_address());
 
     let fresh = human::render(&snapshot, &options(100));
-    assert!(fresh.contains("PUBLIC ADDRESS"), "{fresh}");
-    assert!(!fresh.contains("ago"), "{fresh}");
+    let heading = |text: &str| {
+        text.lines()
+            .find(|line| line.contains("PUBLIC ADDRESS"))
+            .expect("the heading")
+            .to_owned()
+    };
+    // Scoped to the heading: "ago" also appears on a VPN's handshake row.
+    assert!(!heading(&fresh).contains("ago"), "{fresh}");
 
     let mut aged = options(100);
     aged.public_age = Some("3m ago".to_owned());
     let rendered = human::render(&snapshot, &aged);
-    let heading = rendered
-        .lines()
-        .find(|line| line.contains("PUBLIC ADDRESS"))
-        .expect("the heading");
-    assert!(heading.contains("3m ago"), "{heading:?}");
+    assert!(heading(&rendered).contains("3m ago"), "{rendered}");
+}
+
+/// A version a person reads carries a `v`; the one a machine reads does not.
+/// `--json` is parsed by scripts and semver strings have no prefix.
+#[test]
+fn the_version_is_prefixed_for_people_only() {
+    let mut snapshot = full();
+    snapshot.update = Some(UpdateInfo {
+        current: "0.3.1".to_owned(),
+        latest: Some("0.4.0".to_owned()),
+        available: true,
+    });
+    let rendered = human::render(&snapshot, &options(100));
+
+    assert!(rendered.contains("netinspect v0.3.1"), "{rendered}");
+    assert!(rendered.contains("v0.4.0 available"), "{rendered}");
+    // And never doubled: the model holds the bare number.
+    assert!(!rendered.contains("vv"), "{rendered}");
+    assert_eq!(snapshot.version, "0.3.1");
 }
 
 #[test]
@@ -479,7 +500,7 @@ fn a_current_version_prints_no_footer() {
         available: false,
     });
     let rendered = human::render(&snapshot, &options(80));
-    assert!(!rendered.contains("self-update"), "{rendered}");
+    assert!(!rendered.contains("netinspect update"), "{rendered}");
 }
 
 #[test]

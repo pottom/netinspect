@@ -129,7 +129,9 @@ fn header(out: &mut Vec<String>, snapshot: &Snapshot, options: &Options) {
     line.pad_to(RAIL_COL);
     line.push(theme, Role::Bright, "netinspect");
     line.space(1);
-    line.push(theme, Role::Faint, &snapshot.version);
+    // The model carries a bare semver because `--json` is read by machines;
+    // the `v` belongs to the reader, so it is added here.
+    line.push(theme, Role::Faint, &format!("v{}", snapshot.version));
 
     if options.narrow() {
         line.space(2);
@@ -162,13 +164,13 @@ fn footer(out: &mut Vec<String>, snapshot: &Snapshot, options: &Options) {
     line.pad_to(RAIL_COL);
     line.push(theme, Role::Faint, theme.glyphs.arrow_up);
     line.space(1);
-    line.push(theme, Role::Faint, &format!("{latest} available"));
+    line.push(theme, Role::Faint, &format!("v{latest} available"));
 
     // Without colour, the `$` is what marks a line as something to run.
     let command = if theme.monochrome() {
-        "$ netinspect self-update".to_owned()
+        "$ netinspect update".to_owned()
     } else {
-        "netinspect self-update".to_owned()
+        "netinspect update".to_owned()
     };
     if options.narrow() {
         out.push(line.finish());

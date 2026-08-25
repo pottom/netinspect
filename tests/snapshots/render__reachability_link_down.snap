@@ -2,7 +2,7 @@
 source: tests/render.rs
 expression: rendered
 ---
-  netinspect 0.3.1                                               14:22:07 CEST
+  netinspect v0.3.1                                              14:22:07 CEST
   ────────────────────────────────────────────────────────────────────────────
 
   ▌ Wi-Fi · en0                                                    [connected]

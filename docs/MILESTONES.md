@@ -148,9 +148,11 @@ command is usually wanted for.
 ## M8 — Self-update and the release pipeline
 
 - [ ] Update check: cached, non-blocking, refreshed at most daily
-- [ ] `self-update` in the exact order of spec 10.2, leaving the original binary
+- [ ] `update` in the exact order of spec 10.2, leaving the original binary
       untouched on every failure path
 - [ ] Homebrew receipt detection; never offers to escalate with sudo
 - [ ] `completions` subcommand
+- [ ] The subcommand is `update`, not `self-update`: the `self` said nothing
+      the name did not
 - [ ] Release workflow: two targets, `lipo`, sign, notarize, staple, tar,
       minisign, `SHA256SUMS`, Homebrew tap
