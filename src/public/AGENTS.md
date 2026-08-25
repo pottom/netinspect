@@ -48,6 +48,14 @@ against, or the check would compare the tunnel to itself and always pass.
 The same applies to the timezone comparison: it is stated only when both zones
 are known, never inferred from one.
 
+**Known limitation.** `via_vpn` cannot tell a leak from a split tunnel. A
+split-tunnel VPN routes some prefixes and leaves the rest to the default route,
+so the public address legitimately matches the baseline and the row says
+`not routed through VPN` in red. That is true — the traffic really is not going
+through the tunnel — but for a split tunnel it is by design rather than a
+fault. `routes` already knows the difference and says `split tunnel active`;
+joining the two is the obvious next improvement and has not been made.
+
 ## Work Guidance
 
 Parsers are pure functions over the provider's body, tested against a captured

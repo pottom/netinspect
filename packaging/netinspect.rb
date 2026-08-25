@@ -12,11 +12,11 @@ class Netinspect < Formula
   on_macos do
     on_arm do
       url "https://github.com/pottom/netinspect/releases/download/v#{version}/netinspect-#{version}-aarch64-apple-darwin.tar.gz"
-      sha256 "REPLACE_WITH_THE_SHA256SUMS_ENTRY"
+      sha256 "945b9175545a3abfbb4786ba9af0f2b507fb1de4acd2181d22b71ac88e372fc4"
     end
     on_intel do
       url "https://github.com/pottom/netinspect/releases/download/v#{version}/netinspect-#{version}-x86_64-apple-darwin.tar.gz"
-      sha256 "REPLACE_WITH_THE_SHA256SUMS_ENTRY"
+      sha256 "945b9175545a3abfbb4786ba9af0f2b507fb1de4acd2181d22b71ac88e372fc4"
     end
   end
 

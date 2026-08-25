@@ -257,6 +257,13 @@ with no tunnel up, which the cache keeps. Until it has one, the row says
 nothing. A guess here would either raise a false alarm or quietly reassure
 someone whose traffic is leaking.
 
+It cannot yet tell a leak from a **split tunnel**. A split-tunnel VPN routes
+some prefixes and leaves the rest to the default route, so the public address
+legitimately matches the baseline and the row reads `not routed through VPN`.
+That is literally true, but for a split tunnel it is the intended behaviour
+rather than a fault. `netinspect routes` says `split tunnel active` when it
+sees one.
+
 Nothing else leaves the machine. No telemetry, no crash reporting. The geo cache
 is written with mode `0600`.
 
