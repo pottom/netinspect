@@ -6,17 +6,17 @@
 class Netinspect < Formula
   desc "Read-only network diagnostics: configuration, reachability, public address"
   homepage "https://github.com/pottom/netinspect"
-  version "0.1.0"
+  version "0.1.2"
   license "MIT"
 
   on_macos do
     on_arm do
       url "https://github.com/pottom/netinspect/releases/download/v#{version}/netinspect-#{version}-aarch64-apple-darwin.tar.gz"
-      sha256 "945b9175545a3abfbb4786ba9af0f2b507fb1de4acd2181d22b71ac88e372fc4"
+      sha256 "c2aba4bfcf3c641bd3267fac1766319e7c6204fb22b5d1ca75c085fa66246d81"
     end
     on_intel do
       url "https://github.com/pottom/netinspect/releases/download/v#{version}/netinspect-#{version}-x86_64-apple-darwin.tar.gz"
-      sha256 "945b9175545a3abfbb4786ba9af0f2b507fb1de4acd2181d22b71ac88e372fc4"
+      sha256 "6bbee665afe2c0de56f8121033ddda8002a4695e360243f116d7915459130040"
     end
   end
 
