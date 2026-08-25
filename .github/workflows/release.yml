@@ -51,13 +51,19 @@ jobs:
           cargo build --release --target aarch64-apple-darwin
           cargo build --release --target x86_64-apple-darwin
 
-      - name: Make one universal binary
+      # Deliberately *not* a universal binary. The distribution is already
+      # target-aware — install.sh picks by `uname -m` and `update` asks for the
+      # archive its own triple implies — so a fat binary would only mean every
+      # user downloading an architecture they cannot run. v0.1.1 shipped two
+      # byte-identical archives for exactly that reason.
+      - name: Stage one binary per architecture
         run: |
-          mkdir -p dist
-          lipo -create -output dist/netinspect \
-            target/aarch64-apple-darwin/release/netinspect \
-            target/x86_64-apple-darwin/release/netinspect
-          lipo -info dist/netinspect
+          set -euo pipefail
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            mkdir -p "dist/$target"
+            cp "target/$target/release/netinspect" "dist/$target/netinspect"
+            lipo -info "dist/$target/netinspect"
+          done
 
       # Without this, Gatekeeper warns on the first launch on any machine that
       # downloaded the archive through a browser. `curl` and `brew` installs are
@@ -98,22 +104,25 @@ jobs:
             -s -k "$password" "$keychain" >/dev/null
           security list-keychain -d user -s "$keychain"
 
-          codesign --force --options runtime --timestamp \
-            --sign "$SIGNING_IDENTITY" dist/netinspect
-          codesign --verify --strict --verbose=2 dist/netinspect
-
           echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
-          ditto -c -k --keepParent dist/netinspect "$RUNNER_TEMP/notarize.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
-            --key "$RUNNER_TEMP/notary.p8" \
-            --key-id "$NOTARY_KEY_ID" \
-            --issuer "$NOTARY_ISSUER" \
-            --wait
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            binary="dist/$target/netinspect"
+            codesign --force --options runtime --timestamp \
+              --sign "$SIGNING_IDENTITY" "$binary"
+            codesign --verify --strict --verbose=2 "$binary"
 
-          # A stapled ticket is what lets the binary launch on a machine that
-          # is offline when it first runs.
-          xcrun stapler staple dist/netinspect || \
-            echo "note: a bare binary cannot be stapled; the notarisation still stands"
+            ditto -c -k --keepParent "$binary" "$RUNNER_TEMP/$target.zip"
+            xcrun notarytool submit "$RUNNER_TEMP/$target.zip" \
+              --key "$RUNNER_TEMP/notary.p8" \
+              --key-id "$NOTARY_KEY_ID" \
+              --issuer "$NOTARY_ISSUER" \
+              --wait
+
+            # A stapled ticket is what lets it launch on a machine that is
+            # offline when it first runs.
+            xcrun stapler staple "$binary" || \
+              echo "note: a bare binary cannot be stapled; the notarisation still stands"
+          done
 
           rm -f "$RUNNER_TEMP/certificate.p12" "$RUNNER_TEMP/notary.p8"
           security delete-keychain "$keychain"
@@ -126,12 +135,10 @@ jobs:
           version="${{ steps.version.outputs.version }}"
           cd dist
 
-          # One archive per target triple, both holding the same universal
-          # binary: `update` asks for the name its own triple implies.
           for target in aarch64-apple-darwin x86_64-apple-darwin; do
-            tar -czf "netinspect-$version-$target.tar.gz" netinspect
+            tar -czf "netinspect-$version-$target.tar.gz" -C "$target" netinspect
+            rm -rf "$target"
           done
-          rm netinspect
 
           shasum -a 256 ./*.tar.gz | sed 's| \./| |' > SHA256SUMS
 

@@ -49,8 +49,10 @@ a machine that downloaded the archive through a browser.
 
 ## What a release contains
 
-One universal binary, packed once per target triple, because `update` asks for
-the archive its own triple implies:
+One binary per architecture, **not** a universal one. The distribution is
+already target-aware — `install.sh` picks by `uname -m` and `update` asks for
+the archive its own triple implies — so a fat binary would only mean every user
+downloading an architecture they cannot run:
 
 ```
 netinspect-0.4.0-aarch64-apple-darwin.tar.gz
