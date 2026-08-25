@@ -201,10 +201,29 @@ Inherits §7.2 of the spec, with these refinements:
 - No blank line between a section title and its first row.
 - One blank line between interfaces, none between rows within one.
 
-> **Implementation note.** The column numbers above are zero-based offsets: the
-> rail sits at offset 2, labels start at offset 4, values at offset 16, and a
-> full line is 62 characters wide. `src/render/layout.rs` states the same
-> positions as one-based columns (3, 5, 17, 62).
+> **Implementation note — column numbers.** The numbers above are zero-based
+> offsets: the rail sits at offset 2, labels start at offset 4, values at
+> offset 16. `src/render/layout.rs` states the same positions as one-based
+> columns (3, 5, 17).
+>
+> **Implementation note — the content follows the terminal.** 62 columns is the
+> *minimum*, not the width. A fixed 62 left a wide terminal mostly empty while
+> forcing rows to stack that had room to sit on one line, so the content edge
+> is `clamp(terminal - 2, 62, 96)`. Everything that right-aligns follows it.
+>
+> The extra columns are spent on structure, not padding:
+>
+> - The radio's continuation line is a consequence of the width, not a fixture.
+>   At 78 columns and up the standard, rate and SSID source join the row they
+>   describe; below that they drop to their own line as before.
+> - `DNS` and `REACHABILITY` sit side by side once both fit. Neither block
+>   right-aligns anything, so each is exactly as wide as its content and they
+>   are packed against each other — splitting the terminal in half would leave
+>   a gap on one side and wrap the other.
+>
+> 96 is where it stops: past that an annotation right-aligned against the edge
+> is too far from the label it belongs to for the eye to pair them, and the
+> extra room buys nothing.
 
 ### 4.1 The interface rail
 

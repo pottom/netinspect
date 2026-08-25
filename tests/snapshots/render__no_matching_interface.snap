@@ -2,8 +2,8 @@
 source: tests/render.rs
 expression: "human::render(&full(), &options)"
 ---
-  netinspect 0.3.1                               14:22:07 CEST
-  ────────────────────────────────────────────────────────────
+  netinspect 0.3.1                                               14:22:07 CEST
+  ────────────────────────────────────────────────────────────────────────────
 
     no matching interface
 

@@ -17,6 +17,7 @@ fn options(width: usize) -> Options {
         ipv4_only: false,
         ipv6_only: false,
         only_interface: None,
+        edge: None,
     }
 }
 
@@ -364,18 +365,86 @@ fn the_glyph_sets_produce_the_same_line_count() {
     );
 }
 
-/// DESIGN.md §4: the content is 62 columns wide and nothing may exceed it.
+/// The content follows the terminal between its two bounds, and nothing may
+/// spill past the edge it settled on — at any width, with or without the
+/// reachability section.
 #[test]
-fn no_line_overruns_the_content_width() {
-    for width in [80, 66, 48, 38] {
-        let rendered = human::render(&full(), &options(width));
-        for line in rendered.lines() {
-            let columns = line.chars().count();
-            assert!(
-                columns <= 62,
-                "at width {width}, {columns} columns: {line:?}"
-            );
+fn no_line_overruns_the_content_edge() {
+    for width in [200, 140, 100, 96, 80, 66, 48, 38] {
+        let edge = netinspect::render::layout::content_edge(width);
+        let mut snapshot = full();
+        snapshot.reachability = Some(online());
+        for snapshot in [full(), snapshot] {
+            let rendered = human::render(&snapshot, &options(width));
+            for line in rendered.lines() {
+                let columns = line.chars().count();
+                assert!(
+                    columns <= edge,
+                    "at width {width} (edge {edge}), {columns} columns: {line:?}"
+                );
+            }
         }
+    }
+}
+
+/// The point of the width: rows that had to stack at 62 columns stop stacking
+/// as soon as they fit, and the short sections pair up instead of leaving half
+/// the terminal empty.
+#[test]
+fn extra_width_is_spent_on_unstacking_not_on_padding() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(online());
+
+    let narrow = human::render(&snapshot, &options(62));
+    let wide = human::render(&snapshot, &options(120));
+    assert!(
+        wide.lines().count() < narrow.lines().count(),
+        "wide:\n{wide}\nnarrow:\n{narrow}"
+    );
+
+    // The radio's second line is a consequence of the width, not a fixture.
+    assert!(narrow.contains("Wi-Fi 6"), "{narrow}");
+    let radio = wide
+        .lines()
+        .find(|line| line.contains("network"))
+        .expect("a radio row");
+    assert!(radio.contains("Wi-Fi 6"), "{radio:?}");
+    assert!(radio.contains("1200 Mb/s"), "{radio:?}");
+
+    // DNS and REACHABILITY share a row rather than stacking.
+    assert!(
+        wide.lines().any(|l| l.contains("DNS") && l.contains("REACHABILITY")),
+        "{wide}"
+    );
+    assert!(
+        !narrow.lines().any(|l| l.contains("DNS") && l.contains("REACHABILITY")),
+        "{narrow}"
+    );
+}
+
+#[test]
+fn paired_sections_keep_the_timings_under_their_stages() {
+    let mut snapshot = full();
+    snapshot.reachability = Some(online());
+    let wide = human::render(&snapshot, &options(120));
+
+    let ladder = wide.lines().find(|l| l.contains("link ✓")).expect("ladder");
+    let timings = wide.lines().find(|l| l.contains("11 ms")).expect("timings");
+
+    // Columns, not bytes: the ladder is full of multi-byte glyphs, and byte
+    // offsets would agree with each other while agreeing with nothing on
+    // screen.
+    let column_of = |line: &str, needle: &str| {
+        let byte = line.find(needle).expect("present");
+        line[..byte].chars().count()
+    };
+    for stage in ["gateway", "dns", "http"] {
+        let column = column_of(ladder, stage);
+        let under = timings.chars().nth(column);
+        assert!(
+            under.is_some_and(|c| c.is_ascii_digit()),
+            "{stage} timing is not under its name (column {column}, found {under:?}):\n{ladder}\n{timings}"
+        );
     }
 }
 

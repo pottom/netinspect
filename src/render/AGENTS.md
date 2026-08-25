@@ -33,7 +33,14 @@ anything here, and work through its §8 checklist before adding a row.
   not even the clock: the header's local time arrives through `Options` so the
   renderer stays testable.
 - Fragments carry a `Role`, not a colour. `Line` tracks its own visible width so
-  padding is correct whether or not escape sequences were emitted.
+  padding is correct whether or not escape sequences were emitted. A finished
+  block is measured again with `visible_width`, which skips escape sequences —
+  byte offsets agree with each other while agreeing with nothing on screen.
+- **The content edge follows the terminal**, between 62 and 96 columns. Spend
+  the extra width on structure, never on padding: rows that had to stack stop
+  stacking, and short sections pair up. `columns()` appends the right block's
+  lines verbatim — its leading spaces are its own column arithmetic, and the
+  reachability timings are aligned under their stage names by nothing else.
 - Presentation decisions belong here, not in the platform layer — including
   RSSI-to-bars and the Wi-Fi generation name. `--json` keeps the raw
   `802.11xx`.

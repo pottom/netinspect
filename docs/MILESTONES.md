@@ -72,6 +72,18 @@ Landed out of band, from the Claude Design project
       their stage, an untried stage drawn as `·` and never as `✗`, and a
       one-word verdict with a plain-language explanation
 
+## Adaptive width ✅
+
+Landed out of band, after the report was seen on a wide terminal.
+
+- [x] Content edge follows the terminal between 62 and 96 columns
+- [x] The radio row stops stacking once it fits — the second line is a
+      consequence of the width, not a fixture
+- [x] `DNS` and `REACHABILITY` pair side by side when both fit, packed against
+      each other rather than splitting the terminal in half
+- [x] Asserted at every width from 38 to 200: nothing overruns the edge it
+      settled on, and the paired timings stay under their stage names
+
 ## M4 — Public address, cache, timezone, VPN correlation
 
 - [ ] `ipinfo.io` lookup with a plain-IP fallback on 429

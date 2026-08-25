@@ -13,7 +13,8 @@ use crate::model::{
 };
 
 use super::layout::{
-    rule, section, Line, LABEL_COL, NARROW_BELOW, RAIL_BELOW, RAIL_COL, RIGHT_EDGE, VALUE_COL,
+    columns, content_edge, rule, section, visible_width, Line, GUTTER, LABEL_COL, NARROW_BELOW,
+    RAIL_BELOW, RAIL_COL, VALUE_COL,
 };
 use super::reach::{self, Reach};
 use super::theme::{Role, Theme};
@@ -32,6 +33,10 @@ pub struct Options {
     pub ipv6_only: bool,
     /// Restrict the interface section to one interface.
     pub only_interface: Option<String>,
+    /// Force the content edge, for rendering a block into one of two columns.
+    /// `None` derives it from `width`, which is what every caller outside the
+    /// renderer wants.
+    pub edge: Option<usize>,
 }
 
 impl Options {
@@ -48,6 +53,19 @@ impl Options {
     /// enough that they read as structure rather than clutter.
     fn rules(&self) -> bool {
         self.width >= NARROW_BELOW
+    }
+
+    /// Where everything right-aligned lands. Follows the terminal rather than
+    /// sitting at a fixed 62 and leaving the rest of the screen empty.
+    fn edge(&self) -> usize {
+        self.edge.unwrap_or_else(|| content_edge(self.width))
+    }
+
+
+
+    /// Columns available to a value starting at the value column.
+    fn value_room(&self) -> usize {
+        self.edge().saturating_sub(VALUE_COL - 1)
     }
 }
 
@@ -87,10 +105,7 @@ pub fn render(snapshot: &Snapshot, options: &Options) -> String {
         previous_collapsed = collapsed;
     }
 
-    dns_section(&mut out, &snapshot.dns, options);
-    if let Some(reachability) = &snapshot.reachability {
-        reachability_section(&mut out, reachability, options);
-    }
+    sections(&mut out, snapshot, options);
     footer(&mut out, snapshot, options);
 
     let mut text = out.join("\n");
@@ -114,12 +129,12 @@ fn header(out: &mut Vec<String>, snapshot: &Snapshot, options: &Options) {
         line.space(2);
         line.push(theme, Role::Faint, &options.clock);
     } else {
-        line.push_right(theme, Role::Faint, &options.clock, RIGHT_EDGE);
+        line.push_right(theme, Role::Faint, &options.clock, options.edge());
     }
     out.push(line.finish());
 
     if options.rules() {
-        out.push(rule(theme));
+        out.push(rule(theme, options.edge()));
     }
 }
 
@@ -134,7 +149,7 @@ fn footer(out: &mut Vec<String>, snapshot: &Snapshot, options: &Options) {
 
     out.push(String::new());
     if options.rules() {
-        out.push(rule(theme));
+        out.push(rule(theme, options.edge()));
     }
 
     let mut line = Line::new();
@@ -156,7 +171,7 @@ fn footer(out: &mut Vec<String>, snapshot: &Snapshot, options: &Options) {
         next.push(theme, Role::Action, &command);
         out.push(next.finish());
     } else {
-        line.push_right(theme, Role::Action, &command, RIGHT_EDGE);
+        line.push_right(theme, Role::Action, &command, options.edge());
         out.push(line.finish());
     }
 }
@@ -243,7 +258,7 @@ fn interface_block(out: &mut Vec<String>, iface: &Interface, options: &Options) 
         head.space(2);
         head.push(theme, status_role, &status);
     } else {
-        head.push_right(theme, status_role, &status, RIGHT_EDGE);
+        head.push_right(theme, status_role, &status, options.edge());
     }
     out.push(head.finish());
 
@@ -290,11 +305,9 @@ impl Row {
 }
 
 fn collect_rows(rows: &mut Vec<Row>, iface: &Interface, options: &Options) {
-    let theme = &options.theme;
-
     if let Some(wifi) = &iface.wifi {
         if !wifi.is_empty() {
-            rows.push(network_row(wifi, theme));
+            rows.push(network_row(wifi, options));
         }
     }
 
@@ -363,34 +376,39 @@ fn collect_rows(rows: &mut Vec<Row>, iface: &Interface, options: &Options) {
     }
 }
 
-fn network_row(wifi: &WifiDetail, theme: &Theme) -> Row {
+fn network_row(wifi: &WifiDetail, options: &Options) -> Row {
+    let theme = &options.theme;
     let value = match &wifi.ssid {
         Some(ssid) => vec![(Role::Bright, ssid.clone())],
         // Say the SSID is unavailable rather than pretending there is none.
         None => vec![(Role::Faint, "<SSID unavailable>".to_owned())],
     };
+    let ssid_width: usize = value.iter().map(|(_, t)| t.chars().count()).sum();
 
     let mut row = Row::new("network", value);
 
     // Signal strength is a measurement, not a status: the bars are bright and
     // the empty cells are rule. Never green.
-    if let Some(rssi) = wifi.rssi_dbm {
-        let bars = signal_bars(rssi);
-        row.annotation = Some(vec![
-            (Role::Bright, theme.glyphs.bar_full.repeat(bars as usize)),
-            (
-                Role::Rule,
-                theme.glyphs.bar_empty.repeat(5usize.saturating_sub(bars as usize)),
-            ),
-            (
-                Role::Faint,
-                format!(" {}{} dBm", theme.glyphs.minus, rssi.abs()),
-            ),
-        ]);
-    }
+    let signal: Vec<(Role, String)> = match wifi.rssi_dbm {
+        Some(rssi) => {
+            let bars = signal_bars(rssi);
+            vec![
+                (Role::Bright, theme.glyphs.bar_full.repeat(bars as usize)),
+                (
+                    Role::Rule,
+                    theme.glyphs.bar_empty.repeat(5usize.saturating_sub(bars as usize)),
+                ),
+                (
+                    Role::Faint,
+                    format!(" {}{} dBm", theme.glyphs.minus, rssi.abs()),
+                ),
+            ]
+        }
+        None => Vec::new(),
+    };
 
-    // Everything secondary about the radio goes on one continuation line, so
-    // the SSID keeps the value column to itself.
+    // Everything secondary about the radio: the standard, the negotiated rate,
+    // and where the SSID came from if it was not the supported API.
     let mut parts: Vec<String> = Vec::new();
     if let Some(phy) = &wifi.phy_mode {
         parts.push(wifi_generation(phy));
@@ -401,8 +419,32 @@ fn network_row(wifi: &WifiDetail, theme: &Theme) -> Row {
     if let Some(source) = wifi.ssid_source.and_then(|s| s.annotation()) {
         parts.push(source.to_owned());
     }
-    if !parts.is_empty() {
-        row.continuation = Some(parts.join(&format!(" {} ", theme.glyphs.sep)));
+    let separator = format!(" {} ", theme.glyphs.sep);
+    let secondary = parts.join(&separator);
+
+    // On a wide enough terminal the whole radio fits on one line. It only
+    // splits when it has to — the second line is a consequence of the width,
+    // not a fixed part of the design.
+    let signal_width: usize = signal.iter().map(|(_, t)| t.chars().count()).sum();
+    let room = options.value_room().saturating_sub(ssid_width + 2);
+    let inline = !secondary.is_empty()
+        && !options.narrow()
+        && signal_width + separator.chars().count() + secondary.chars().count() <= room;
+
+    row.annotation = match (signal.is_empty(), secondary.is_empty(), inline) {
+        (true, true, _) => None,
+        (true, false, true) => Some(vec![(Role::Faint, secondary.clone())]),
+        (false, _, false) => Some(signal),
+        (false, false, true) => {
+            let mut all = signal;
+            all.push((Role::Faint, format!("{separator}{secondary}")));
+            Some(all)
+        }
+        (false, true, true) => Some(signal),
+        (true, false, false) => None,
+    };
+    if !secondary.is_empty() && !inline {
+        row.continuation = Some(secondary);
     }
 
     row
@@ -497,8 +539,8 @@ fn emit_row(out: &mut Vec<String>, options: &Options, row: &Row, rail: Rail) {
     if let Some(annotation) = &row.annotation {
         let width: usize = annotation.iter().map(|(_, t)| t.chars().count()).sum();
         let padding = " ".repeat(width);
-        if line.fits_right(&padding, RIGHT_EDGE) {
-            line.pad_to(RIGHT_EDGE - width + 1);
+        if line.fits_right(&padding, options.edge()) {
+            line.pad_to(options.edge() - width + 1);
             for (role, text) in annotation {
                 line.push(theme, *role, text);
             }
@@ -631,6 +673,51 @@ fn duration(seconds: u64) -> String {
 }
 
 // ---------------------------------------------------------------------------
+// Sections
+// ---------------------------------------------------------------------------
+
+/// The short sections carry three or four rows each and leave most of a wide
+/// terminal empty. Pairing them is what actually spends the extra columns:
+/// widening a row that is already short spends nothing.
+fn sections(out: &mut Vec<String>, snapshot: &Snapshot, options: &Options) {
+    let mut dns = Vec::new();
+    dns_section(&mut dns, &snapshot.dns, options);
+
+    let Some(reachability) = &snapshot.reachability else {
+        out.extend(dns);
+        return;
+    };
+    let mut ladder = Vec::new();
+    reachability_section(&mut ladder, reachability, options);
+
+    // Neither block right-aligns anything, so both are exactly as wide as
+    // their content. Pack them against each other rather than splitting the
+    // terminal in half: a fixed half-width column would leave a gap on one
+    // side and wrap the other.
+    let width = |block: &[String]| block.iter().map(|l| visible_width(l)).max().unwrap_or(0);
+    let left = width(&dns);
+    let right = width(&ladder);
+
+    if options.narrow() || left + GUTTER + right > options.edge() {
+        out.extend(dns);
+        out.extend(ladder);
+        return;
+    }
+
+    // Both open with the blank line that separates them from what came before;
+    // the second one's would leave a hole in the middle of the row.
+    if ladder.first().is_some_and(|line| line.trim().is_empty()) {
+        ladder.remove(0);
+    }
+    if dns.first().is_some_and(|line| line.trim().is_empty()) {
+        out.push(String::new());
+        dns.remove(0);
+    }
+
+    out.extend(columns(dns, ladder, left + GUTTER + 1));
+}
+
+// ---------------------------------------------------------------------------
 // Reachability
 // ---------------------------------------------------------------------------
 
@@ -756,7 +843,7 @@ fn narrow_ladder(out: &mut Vec<String>, report: &Reachability, options: &Options
     for rung in rungs(report).iter() {
         let (role, mark) = mark_for(rung.outcome, theme);
         let width = rung.name.chars().count() + 1 + mark.chars().count();
-        if !first && line.width() + width + 3 > options.width.min(RIGHT_EDGE) {
+        if !first && line.width() + width + 3 > options.edge() {
             out.push(line.finish());
             line = Line::new();
             line.pad_to(LABEL_COL);

@@ -173,6 +173,7 @@ impl Cli {
             ipv4_only: self.ipv4_only,
             ipv6_only: self.ipv6_only,
             only_interface: self.interface.clone(),
+            edge: None,
         }
     }
 
