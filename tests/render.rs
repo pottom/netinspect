@@ -274,8 +274,8 @@ fn public_address_section() {
     insta::assert_snapshot!(human::render(&snapshot, &options(100)));
 }
 
-/// The loudest thing the report can say. A tunnel is up and the traffic is not
-/// going through it.
+/// The loudest thing the report can say — but only when a tunnel that was
+/// supposed to carry everything is not carrying it.
 #[test]
 fn a_vpn_leak_is_named_on_the_address_it_concerns() {
     let mut snapshot = full();
@@ -284,9 +284,50 @@ fn a_vpn_leak_is_named_on_the_address_it_concerns() {
         via_vpn: Some(false),
         ..public_address()
     });
+    // The tunnel in `full()` owns the default route, so everything should be
+    // going through it.
+    snapshot.interfaces[1].is_default_route = true;
+
     let rendered = human::render(&snapshot, &options(100));
     assert!(rendered.contains("not routed through VPN"), "{rendered}");
     insta::assert_snapshot!(rendered);
+}
+
+/// A split tunnel routes some prefixes and leaves the rest to the local
+/// network. The public address being outside it is the configuration working,
+/// not a fault, and painting it red would be crying wolf.
+#[test]
+fn a_split_tunnel_is_not_reported_as_a_leak() {
+    let mut snapshot = full();
+    snapshot.public = Some(PublicAddress {
+        via_vpn: Some(false),
+        ..public_address()
+    });
+    // The tunnel is up; the default route belongs to Wi-Fi.
+    assert!(!snapshot.interfaces[1].is_default_route);
+
+    let rendered = human::render(&snapshot, &options(100));
+    let row = rendered
+        .lines()
+        .find(|l| l.contains("84.21.7.113"))
+        .unwrap();
+    assert!(row.contains("outside the split tunnel"), "{row:?}");
+    assert!(!rendered.contains("not routed through VPN"), "{rendered}");
+}
+
+/// With no tunnel up at all there is nothing to say either way.
+#[test]
+fn without_a_tunnel_the_address_row_carries_no_verdict_either() {
+    let mut snapshot = full();
+    snapshot.interfaces.retain(|iface| iface.name != "utun3");
+    snapshot.public = Some(PublicAddress {
+        via_vpn: Some(false),
+        ..public_address()
+    });
+    let row = human::render(&snapshot, &options(100));
+    let row = row.lines().find(|l| l.contains("84.21.7.113")).unwrap();
+    assert!(!row.contains("VPN"), "{row:?}");
+    assert!(!row.contains("split tunnel"), "{row:?}");
 }
 
 #[test]

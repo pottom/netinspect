@@ -48,13 +48,17 @@ against, or the check would compare the tunnel to itself and always pass.
 The same applies to the timezone comparison: it is stated only when both zones
 are known, never inferred from one.
 
-**Known limitation.** `via_vpn` cannot tell a leak from a split tunnel. A
-split-tunnel VPN routes some prefixes and leaves the rest to the default route,
-so the public address legitimately matches the baseline and the row says
-`not routed through VPN` in red. That is true — the traffic really is not going
-through the tunnel — but for a split tunnel it is by design rather than a
-fault. `routes` already knows the difference and says `split tunnel active`;
-joining the two is the obvious next improvement and has not been made.
+**A leak and a split tunnel are not the same fact.** `via_vpn` answers only
+"is the public address reached through a tunnel", and `Some(false)` is correct
+for both. What separates them is whether a tunnel owns the **default route**:
+one that does was supposed to carry everything, so an address outside it is a
+broken guarantee; a split tunnel deliberately leaves the rest to the local
+network, and painting that red would be crying wolf about the thing it was
+configured to do.
+
+That distinction is drawn in the renderer (`human::tunnel_shape`), not here,
+because the fact it needs — which interface owns the default route — is already
+in the `Snapshot`. Nothing had to be added to the model for it.
 
 ## Work Guidance
 

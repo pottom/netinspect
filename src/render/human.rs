@@ -706,7 +706,12 @@ fn sections(out: &mut Vec<String>, snapshot: &Snapshot, options: &Options) {
     }
     if let Some(public) = &snapshot.public {
         let mut block = Vec::new();
-        public_section(&mut block, public, options);
+        public_section(
+            &mut block,
+            public,
+            tunnel_shape(&snapshot.interfaces),
+            options,
+        );
         blocks.push(block);
     }
 
@@ -767,7 +772,41 @@ fn pack(blocks: Vec<Vec<String>>, edge: usize) -> Vec<String> {
 // Public address
 // ---------------------------------------------------------------------------
 
-fn public_section(out: &mut Vec<String>, public: &PublicAddress, options: &Options) {
+/// What a tunnel, if any, is being asked to carry.
+///
+/// The distinction the leak check turns on: a tunnel that owns the default
+/// route is supposed to carry everything, and a public address outside it is a
+/// broken guarantee. A split tunnel is not — it routes some prefixes and
+/// deliberately leaves the rest to the local network.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Tunnel {
+    None,
+    /// A VPN owns the default route: everything should go through it.
+    Full,
+    /// A VPN is up but the default route is somewhere else.
+    Split,
+}
+
+fn tunnel_shape(interfaces: &[Interface]) -> Tunnel {
+    let tunnels = interfaces
+        .iter()
+        .filter(|iface| iface.kind == InterfaceKind::Vpn && iface.is_active());
+    let mut shape = Tunnel::None;
+    for tunnel in tunnels {
+        if tunnel.is_default_route {
+            return Tunnel::Full;
+        }
+        shape = Tunnel::Split;
+    }
+    shape
+}
+
+fn public_section(
+    out: &mut Vec<String>,
+    public: &PublicAddress,
+    tunnel: Tunnel,
+    options: &Options,
+) {
     let theme = &options.theme;
     out.push(String::new());
     // In watch mode the address is not re-fetched every tick, so the heading
@@ -789,10 +828,18 @@ fn public_section(out: &mut Vec<String>, public: &PublicAddress, options: &Optio
         let mut row = Row::new(label, vec![(Role::Public, address.clone())]);
         // Whether the tunnel is actually carrying this traffic is the loudest
         // thing on the page when the answer is no.
-        row.annotation = match public.via_vpn {
-            Some(true) => Some(vec![(Role::Ok, "via VPN".to_owned())]),
-            Some(false) => Some(vec![(Role::Fail, "not routed through VPN".to_owned())]),
-            None => None,
+        // Only a tunnel that was supposed to carry everything can have failed
+        // to. Painting a split tunnel red would be crying wolf about the thing
+        // it was configured to do.
+        row.annotation = match (public.via_vpn, tunnel) {
+            (Some(true), _) => Some(vec![(Role::Ok, "via VPN".to_owned())]),
+            (Some(false), Tunnel::Full) => {
+                Some(vec![(Role::Fail, "not routed through VPN".to_owned())])
+            }
+            (Some(false), Tunnel::Split) => {
+                Some(vec![(Role::Faint, "outside the split tunnel".to_owned())])
+            }
+            (Some(false), Tunnel::None) | (None, _) => None,
         };
         emit_row(out, options, &row, Rail::None);
     }
@@ -1131,6 +1178,46 @@ mod tests {
         assert_eq!(duration(90), "1m");
         assert_eq!(duration(15113), "4h 11m");
         assert_eq!(duration(200000), "2d 7h");
+    }
+
+    fn tunnel(active: bool, default_route: bool) -> Interface {
+        Interface {
+            name: "utun4".to_owned(),
+            display_name: None,
+            kind: InterfaceKind::Vpn,
+            status: if active {
+                InterfaceStatus::Up
+            } else {
+                InterfaceStatus::Inactive
+            },
+            ipv4: Vec::new(),
+            ipv6: Vec::new(),
+            gateway: None,
+            mac: None,
+            mtu: None,
+            dhcp: None,
+            wifi: None,
+            vpn: None,
+            is_default_route: default_route,
+        }
+    }
+
+    #[test]
+    fn a_tunnel_that_owns_the_default_route_is_carrying_everything() {
+        assert_eq!(tunnel_shape(&[]), Tunnel::None);
+        assert_eq!(tunnel_shape(&[tunnel(false, false)]), Tunnel::None);
+        assert_eq!(tunnel_shape(&[tunnel(true, false)]), Tunnel::Split);
+        assert_eq!(tunnel_shape(&[tunnel(true, true)]), Tunnel::Full);
+        // One full tunnel among several settles it, whatever order they come
+        // in: something is meant to be carrying everything.
+        assert_eq!(
+            tunnel_shape(&[tunnel(true, false), tunnel(true, true)]),
+            Tunnel::Full
+        );
+        assert_eq!(
+            tunnel_shape(&[tunnel(true, true), tunnel(true, false)]),
+            Tunnel::Full
+        );
     }
 
     #[test]
