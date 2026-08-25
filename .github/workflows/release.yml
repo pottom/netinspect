@@ -1,0 +1,142 @@
+name: release
+
+# Cutting a release means tagging it. Everything below is reproducible from
+# the tag alone.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build, e.g. v0.4.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the version
+        id: version
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      # The tag and Cargo.toml disagreeing is the mistake that ships a binary
+      # reporting the wrong version of itself.
+      - name: Check the tag matches Cargo.toml
+        run: |
+          cargo="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          if [ "$cargo" != "${{ steps.version.outputs.version }}" ]; then
+            echo "Cargo.toml says $cargo, the tag says ${{ steps.version.outputs.version }}" >&2
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: The checks that gate a release
+        run: |
+          cargo clippy --all-targets -- -D warnings
+          cargo test
+
+      - name: Build both architectures
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
+
+      - name: Make one universal binary
+        run: |
+          mkdir -p dist
+          lipo -create -output dist/netinspect \
+            target/aarch64-apple-darwin/release/netinspect \
+            target/x86_64-apple-darwin/release/netinspect
+          lipo -info dist/netinspect
+
+      # Without this, Gatekeeper blocks the first launch on any machine that
+      # downloaded the archive through a browser.
+      - name: Sign, notarize and staple
+        env:
+          CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          NOTARY_ISSUER: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY }}
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          password="$(uuidgen)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 900 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+
+          echo "$CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" \
+            -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$password" "$keychain" >/dev/null
+          security list-keychain -d user -s "$keychain"
+
+          codesign --force --options runtime --timestamp \
+            --sign "$SIGNING_IDENTITY" dist/netinspect
+          codesign --verify --strict --verbose=2 dist/netinspect
+
+          echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
+          ditto -c -k --keepParent dist/netinspect "$RUNNER_TEMP/notarize.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
+            --key "$RUNNER_TEMP/notary.p8" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER" \
+            --wait
+
+          # A stapled ticket is what lets the binary launch on a machine that
+          # is offline when it first runs.
+          xcrun stapler staple dist/netinspect || \
+            echo "note: a bare binary cannot be stapled; the notarisation still stands"
+
+          rm -f "$RUNNER_TEMP/certificate.p12" "$RUNNER_TEMP/notary.p8"
+          security delete-keychain "$keychain"
+
+      - name: Pack, sign and checksum
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          cd dist
+
+          # One archive per target triple, both holding the same universal
+          # binary: `update` asks for the name its own triple implies.
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            tar -czf "netinspect-$version-$target.tar.gz" netinspect
+          done
+          rm netinspect
+
+          shasum -a 256 ./*.tar.gz | sed 's| \./| |' > SHA256SUMS
+
+          cargo install minisign --locked
+          echo "$MINISIGN_SECRET_KEY" > "$RUNNER_TEMP/minisign.key"
+          for archive in ./*.tar.gz; do
+            minisign -S -s "$RUNNER_TEMP/minisign.key" -m "$archive" \
+              -c "netinspect $version" -x "$archive.minisig"
+          done
+          rm -f "$RUNNER_TEMP/minisign.key"
+
+          ls -l
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            dist/*.tar.gz
+            dist/*.minisig
+            dist/SHA256SUMS
+          fail_on_unmatched_files: true

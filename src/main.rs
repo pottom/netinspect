@@ -15,6 +15,7 @@ use netinspect::model::{
 use netinspect::probe::{self, net::Net, Ladder};
 use netinspect::public::{self, cache};
 use netinspect::render::{human, json, listen as render_listen, routes as render_routes};
+use netinspect::update::{self, check};
 use netinspect::sys;
 
 fn main() -> ExitCode {
@@ -37,6 +38,31 @@ fn run() -> Result<ExitCode> {
     });
     let interfaces = platform.interfaces()?;
     let dns = platform.dns_config()?;
+
+    match &cli.command {
+        Some(Command::Update { force }) => {
+            let outcome = update::run(env!("CARGO_PKG_VERSION"), *force, cli.verbose)?;
+            println!("netinspect: {}", outcome.message());
+            return Ok(match outcome {
+                update::Outcome::Updated { .. } | update::Outcome::AlreadyCurrent(_) => {
+                    ExitCode::SUCCESS
+                }
+                // Nothing was installed, and a script should be able to tell.
+                _ => ExitCode::from(1),
+            });
+        }
+        Some(Command::Completions { shell }) => {
+            use clap::CommandFactory;
+            clap_complete::generate(
+                *shell,
+                &mut Cli::command(),
+                "netinspect",
+                &mut std::io::stdout(),
+            );
+            return Ok(ExitCode::SUCCESS);
+        }
+        _ => {}
+    }
 
     if let Some(Command::Routes { iface }) = &cli.command {
         return routes(&cli, platform.as_ref(), &interfaces, iface.as_deref());
@@ -74,9 +100,17 @@ fn run() -> Result<ExitCode> {
         return watch(&cli, platform.as_ref(), interval);
     }
 
-    let mut carried = Carried::default();
+    let mut carried = Carried {
+        update: known_update(),
+        ..Carried::default()
+    };
     let text = frame(&cli, &interfaces, &dns, &mut carried)?;
     println!("{text}");
+
+    // Never before the report. A first run that paused to ask a server about
+    // itself would be a bad first impression, and the answer is only ever used
+    // by the *next* run anyway.
+    refresh_update_check(&cli);
 
     // The default command succeeded at its job of reporting, whatever the
     // network turned out to be doing. Only `check` encodes connectivity.
@@ -90,6 +124,8 @@ struct Carried {
     fingerprint: Option<String>,
     public: Option<PublicAddress>,
     fetched_at_unix: i64,
+    /// Whatever the last update check already knew. Never fetched here.
+    update: Option<netinspect::model::UpdateInfo>,
 }
 
 /// One rendered report.
@@ -137,7 +173,7 @@ fn frame(
         dns: dns.clone(),
         reachability,
         public: carried.public.clone(),
-        update: None,
+        update: carried.update.clone(),
     };
 
     if cli.json {
@@ -146,6 +182,79 @@ fn frame(
     let mut options = cli.render_options(clock());
     options.public_age = age;
     Ok(human::render(&snapshot, &options).trim_end().to_owned())
+}
+
+/// What the last update check found, if it ever ran.
+///
+/// Read from the cache and nothing else: rendering the footer must not depend
+/// on reaching a server.
+fn known_update() -> Option<netinspect::model::UpdateInfo> {
+    if check::disabled() {
+        return None;
+    }
+    let directory = cache::directory()?;
+    check::footer(check::load(&directory).as_ref(), env!("CARGO_PKG_VERSION"))
+}
+
+/// Ask about releases at most once a day, after the report is already printed.
+///
+/// Failures are silent: not knowing about a new version is not something to
+/// interrupt anyone over, and a recorded failure keeps it from being retried
+/// on every run.
+fn refresh_update_check(cli: &Cli) {
+    if check::disabled() || cli.json {
+        return;
+    }
+    let Some(directory) = cache::directory() else {
+        return;
+    };
+    let now_unix = jiff::Timestamp::now().as_second();
+    let previous = check::load(&directory);
+    if !check::due(previous.as_ref(), now_unix) {
+        return;
+    }
+
+    let latest = latest_release_tag();
+    if cli.verbose {
+        match &latest {
+            Some(tag) => eprintln!("netinspect: update check found {tag}"),
+            None => eprintln!("netinspect: update check found nothing"),
+        }
+    }
+    let _ = check::store(
+        &directory,
+        &check::Check {
+            schema: 1,
+            checked_at_unix: now_unix,
+            latest,
+        },
+    );
+}
+
+fn latest_release_tag() -> Option<String> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .ok()?;
+    let client = reqwest::Client::builder()
+        .user_agent(concat!("netinspect/", env!("CARGO_PKG_VERSION")))
+        // Short: the report is already on screen and nobody is waiting for
+        // this on purpose.
+        .timeout(Duration::from_secs(3))
+        .build()
+        .ok()?;
+
+    runtime.block_on(async {
+        let body = client
+            .get(update::release::RELEASES_URL)
+            .send()
+            .await
+            .ok()?
+            .text()
+            .await
+            .ok()?;
+        update::release::parse(&body).ok().map(|release| release.tag)
+    })
 }
 
 /// Redraw the frame in place until interrupted.
@@ -159,7 +268,10 @@ fn watch(cli: &Cli, platform: &dyn sys::Platform, interval: Duration) -> Result<
     // The cursor would otherwise sit blinking in the middle of the report.
     write!(out, "\x1b[?25l")?;
 
-    let mut carried = Carried::default();
+    let mut carried = Carried {
+        update: known_update(),
+        ..Carried::default()
+    };
     let result = loop {
         let interfaces = match platform.interfaces() {
             Ok(interfaces) => interfaces,

@@ -21,6 +21,22 @@ use crate::model::{
 };
 use crate::sys::{Platform, PlatformConfig};
 
+/// `removexattr(2)` for `com.apple.quarantine`.
+///
+/// A binary that arrived over the network carries this flag, and Gatekeeper
+/// refuses it on first launch. Its absence is success, so "no such attribute"
+/// counts as done.
+pub fn strip_quarantine(path: &std::path::Path) -> bool {
+    let Ok(path) = std::ffi::CString::new(path.as_os_str().as_encoded_bytes()) else {
+        return false;
+    };
+    let name = c"com.apple.quarantine";
+    // Safety: two NUL-terminated strings and no flags; the call writes nothing
+    // through either pointer.
+    let rc = unsafe { libc::removexattr(path.as_ptr(), name.as_ptr(), 0) };
+    rc == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::ENOATTR)
+}
+
 pub struct MacOs {
     config: PlatformConfig,
 }

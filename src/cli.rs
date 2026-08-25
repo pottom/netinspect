@@ -94,6 +94,19 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Replace this binary with the latest release
+    Update {
+        /// Install the latest release even if it is not newer
+        #[arg(long)]
+        force: bool,
+    },
+
+    /// Print a shell completion script
+    Completions {
+        #[arg(value_enum)]
+        shell: clap_complete::Shell,
+    },
+
     /// List listening sockets
     Listen {
         /// Only TCP
@@ -133,7 +146,10 @@ impl Cli {
     pub fn probes_enabled(&self) -> bool {
         match self.command {
             Some(Command::Check) => true,
-            Some(Command::Routes { .. }) | Some(Command::Listen { .. }) => false,
+            Some(Command::Routes { .. })
+            | Some(Command::Listen { .. })
+            | Some(Command::Update { .. })
+            | Some(Command::Completions { .. }) => false,
             None => !self.no_check,
         }
     }
@@ -394,6 +410,25 @@ mod tests {
             Cli::parse_from(["netinspect", "en0"]).interface.as_deref(),
             Some("en0")
         );
+    }
+
+    #[test]
+    fn update_and_completions_are_subcommands() {
+        assert!(matches!(
+            Cli::parse_from(["netinspect", "update"]).command,
+            Some(Command::Update { force: false })
+        ));
+        assert!(matches!(
+            Cli::parse_from(["netinspect", "update", "--force"]).command,
+            Some(Command::Update { force: true })
+        ));
+        assert!(matches!(
+            Cli::parse_from(["netinspect", "completions", "zsh"]).command,
+            Some(Command::Completions { .. })
+        ));
+        // Neither has any use for the network state of the machine.
+        assert!(!Cli::parse_from(["netinspect", "update"]).probes_enabled());
+        assert!(!Cli::parse_from(["netinspect", "completions", "zsh"]).lookup_enabled());
     }
 
     #[test]

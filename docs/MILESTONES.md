@@ -145,14 +145,30 @@ clear-to-end instead, which is the escape sequence it also names. The last
 frame then stays on the terminal after Ctrl-C, which is what a monitoring
 command is usually wanted for.
 
-## M8 — Self-update and the release pipeline
+## M8 — `update` and the release pipeline ✅
 
-- [ ] Update check: cached, non-blocking, refreshed at most daily
-- [ ] `update` in the exact order of spec 10.2, leaving the original binary
+- [x] Update check: read from the cache, rendered without reaching anything,
+      refreshed at most daily and only after the report is on screen. A first
+      run prints no footer at all
+- [x] `update` in the order of spec 10.2 — resolve, refuse a downgrade,
+      download, digest, signature, and only then replace — leaving the original
       untouched on every failure path
-- [ ] Homebrew receipt detection; never offers to escalate with sudo
-- [ ] `completions` subcommand
-- [ ] The subcommand is `update`, not `self-update`: the `self` said nothing
-      the name did not
-- [ ] Release workflow: two targets, `lipo`, sign, notarize, staple, tar,
-      minisign, `SHA256SUMS`, Homebrew tap
+- [x] The signing key is compiled in and never fetched; a build without one
+      **fails closed** rather than skipping verification
+- [x] Homebrew installs are detected from their path and left to `brew`;
+      an unwritable path is reported and nothing offers to escalate
+- [x] `completions` for every shell clap offers, covering the whole surface
+- [x] Release workflow: two targets, `lipo`, Developer ID signing, notarisation,
+      stapling, tar, minisign, `SHA256SUMS`, and a Homebrew formula in
+      `packaging/`
+- [x] `docs/RELEASING.md`: how to generate the key, what each secret is, and
+      how to check a release by hand
+
+`verify::PUBLIC_KEY` is empty until a real keypair is generated, so `update`
+refuses. That is deliberate, and `docs/RELEASING.md` is the first thing to do
+before a first release.
+
+---
+
+All eight milestones are done. What remains is a first release: generate the
+signing key, add the Apple secrets, and push a tag.

@@ -202,6 +202,30 @@ telling you a port is protected when it does not know. Note also that the macOS
 application firewall filters by application, not by port, and does not apply to
 traffic already accepted by a listening system service.
 
+## Updating
+
+```
+$ netinspect update
+```
+
+It resolves the latest release, refuses to go backwards, downloads, checks the
+digest, checks the **signature against a key compiled into the binary**, and
+only then puts anything next to the running one. Every failure returns before
+the original is touched, and the replacement is a rename within one filesystem
+so there is no moment where the binary is half-written.
+
+A build without a signing key refuses to update at all rather than skipping the
+check — an update path that cannot verify what it downloads is worse than none.
+See [`docs/RELEASING.md`](docs/RELEASING.md).
+
+If Homebrew installed it, `update` says `brew upgrade netinspect` instead of
+fighting a package manager over its own files. If the path is not writable it
+says so and stops; it will not offer to escalate.
+
+The version footer comes from a check that runs at most once a day, **after**
+the report is already on screen, and never appears on a first run. Disable it
+with `NETINSPECT_NO_UPDATE_CHECK=1`.
+
 ## Privacy
 
 The public-address lookup sends this machine's IP to ipinfo.io

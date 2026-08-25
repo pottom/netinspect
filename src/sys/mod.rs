@@ -93,6 +93,19 @@ pub fn interrupt_flag() -> &'static AtomicBool {
     &INTERRUPTED
 }
 
+/// Remove the flag a file picks up from being downloaded, so Gatekeeper does
+/// not refuse the replacement binary on its first launch. `true` when there is
+/// nothing left to strip.
+#[cfg(target_os = "macos")]
+pub fn strip_quarantine(path: &std::path::Path) -> bool {
+    macos::strip_quarantine(path)
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn strip_quarantine(_path: &std::path::Path) -> bool {
+    true // no such concept here
+}
+
 /// Select the backend for this target. Called once at startup.
 #[cfg(target_os = "macos")]
 pub fn platform(config: PlatformConfig) -> Box<dyn Platform> {

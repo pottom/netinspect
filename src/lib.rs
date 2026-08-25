@@ -11,4 +11,5 @@ pub mod parse;
 pub mod probe;
 pub mod public;
 pub mod render;
+pub mod update;
 pub mod sys;
