@@ -1,0 +1,6 @@
+# See AGENTS.md and spec 2.1: netinspect must not shell out.
+# The single permitted exception is src/sys/macos/ssid_helper.rs, which carries
+# an #[allow(clippy::disallowed_methods)] and is guarded by tests/guards.rs.
+disallowed-methods = [
+  { path = "std::process::Command::new", reason = "netinspect must not shell out — see AGENTS.md / spec 2.1" },
+]

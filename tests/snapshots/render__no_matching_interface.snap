@@ -1,0 +1,13 @@
+---
+source: tests/render.rs
+expression: "human::render(&full(), &options)"
+---
+  netinspect 0.3.1                               14:22:07 CEST
+  ────────────────────────────────────────────────────────────
+
+    no matching interface
+
+  DNS
+    servers     1.1.1.1   9.9.9.9
+    search      otthon.lan
+    proxy       none

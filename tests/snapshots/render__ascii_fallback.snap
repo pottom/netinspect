@@ -1,0 +1,26 @@
+---
+source: tests/render.rs
+expression: "human::render(&full(), &options)"
+---
+  netinspect 0.3.1                               14:22:07 CEST
+  ------------------------------------------------------------
+
+  | Wi-Fi | en0                                    [connected]
+  | network     Otthon_5G                        ##### -48 dBm
+  |             Wi-Fi 6 | 1200 Mb/s
+  | ipv4        192.168.1.24/24                           dhcp
+  | ipv6        fe80::1c4d:8a2f:9b01:3e77
+  | gateway     192.168.1.1
+  . hardware    a4:83:e7:2d:11:9c                     mtu 1500
+
+  | VPN | utun3                                           [up]
+  | protocol    WireGuard
+  | ipv4        10.7.0.4/32
+  . endpoint    51.75.12.9:51820             handshake 41s ago
+
+  . Ethernet | en5                                  [no cable]
+
+  DNS
+    servers     1.1.1.1   9.9.9.9
+    search      otthon.lan
+    proxy       none

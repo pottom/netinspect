@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#eceae4;font-family:Inter,system-ui,sans-serif}
+.dv-turn{padding:40px 44px 34px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 22px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#191917;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 Inter,system-ui,sans-serif;color:#191917}
+.dv-opts{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#191917;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 Inter,system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-opt:target .dv-oid{background:#2a5fd0;color:#fff}
+.dv-next{margin:24px 0 0;font:12px/1.5 Inter,system-ui,sans-serif;color:rgba(0,0,0,.5)}
+a{color:#2a5fd0}a:hover{color:#17408f}
+.pair{display:flex;gap:18px;flex-wrap:wrap}
+.tw{border-radius:11px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.13),0 12px 34px rgba(0,0,0,.07)}
+.tw-bar{display:flex;align-items:center;gap:7px;padding:10px 14px}
+.tw-dot{width:9px;height:9px;border-radius:50%}
+.tw-name{margin-left:6px;font:500 10.5px Inter,sans-serif;letter-spacing:.03em}
+pre{margin:0;padding:22px 24px 24px;white-space:pre;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.72;font-weight:400;font-variant-ligatures:none;-webkit-font-smoothing:antialiased}
+.k{--bg:#101114;--bright:#efede6;--body:#b8b6ae;--dim:#7e7c75;--faint:#56544f;--rule:#2b2c31;--ok:#86c06c;--er:#ed6a5e;--loc:#79a6de;--lan:#4cb39b;--pub:#e5a73c;--act:#b79cf0;--barbg:rgba(255,255,255,.05);--dot:#34353b;background:var(--bg);color:var(--body)}
+.w{--bg:#faf8f3;--bright:#17161a;--body:#43413b;--dim:#78766e;--faint:#a19e95;--rule:#e0dcd1;--ok:#3f7a22;--er:#c0392b;--loc:#1f5fa8;--lan:#0f7365;--pub:#8a5a0a;--act:#6146c4;--barbg:rgba(0,0,0,.045);--dot:#d6d0c3;background:var(--bg);color:var(--body)}
+.k .g,.w .g{color:var(--bright);font-weight:500}
+.k .dm,.w .dm{color:var(--dim)}
+.k .ft,.w .ft{color:var(--faint)}
+.k .rl,.w .rl{color:var(--rule)}
+.k .y,.w .y{color:var(--ok)}
+.k .n,.w .n{color:var(--er)}
+.k .lo,.w .lo{color:var(--loc)}
+.k .la,.w .la{color:var(--lan)}
+.k .pu,.w .pu{color:var(--pub)}
+.k .ac,.w .ac{color:var(--act)}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle}
+.mx{display:grid;grid-template-columns:repeat(4,max-content);gap:16px}
+.tw.flat{border-radius:9px;box-shadow:0 1px 2px rgba(0,0,0,.10),0 6px 20px rgba(0,0,0,.05)}
+.tw.flat pre{padding:18px 20px 20px;font-size:12px;line-height:1.70}
+.thname{padding:9px 20px 0;font:500 10px Inter,sans-serif;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+.dark{--bg:#17171a;--bright:#f1efe8;--body:#c9c7be;--dim:#888780;--faint:#5f5e5a;--rule:#38383a;--ok:#97c459;--warn:#ef9f27;--err:#f09595;--val:#fac775;--link:#85b7eb;--barbg:rgba(255,255,255,.05);--dot:#3d3d42;background:var(--bg);color:var(--body)}
+.light{--bg:#faf8f2;--bright:#191813;--body:#3f3d34;--dim:#78766c;--faint:#a3a096;--rule:#dedacd;--ok:#4f7d1a;--warn:#9a5c07;--err:#b03636;--val:#8a5800;--link:#2a5fd0;--barbg:rgba(0,0,0,.045);--dot:#d3cdc0;background:var(--bg);color:var(--body)}
+.b{color:var(--bright);font-weight:500}.d{color:var(--dim)}.f{color:var(--faint)}.r{color:var(--rule)}.ok{color:var(--ok)}.wa{color:var(--warn)}.er{color:var(--err)}.va{color:var(--val)}.li{color:var(--link)}
+</style></helmet>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Finomítás + nyolc valódi terminál-témán letesztelve</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="4a">
+<div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>A finomított riport — kurzívval a becsült érték, szűkebb léptékkel, egy oszlopba rendezett annotációkkal</div>
+<div class="pair">
+
+<div class="tw k" style="--bg:#0e0e11">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">Ink</span></div>
+<pre>  <span class="g">netinspect</span> <span class="ft">0.3.1</span>                          <span class="ft">14:22:07 CEST</span>
+
+  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                                     <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">network</span>     <span class="g">Otthon_5G</span>                  <span class="g">▇▇▇▇</span><span class="rl">▁</span> <span class="ft">−48 dBm</span>
+  <span class="rl">│</span> <span class="dm">          </span>  <span class="ft">Wi-Fi 6E · 1200 Mb/s · via networksetup</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>        <span class="la">192.168.1.24</span><span class="ft">/24</span>       <span class="ft">dhcp, renews in 4h 12m</span>
+  <span class="rl">│</span> <span class="dm">ipv6</span>        <span class="la">fe80::1c4d:8a2f:9b01:3e77</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>     <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">hardware</span>    <span class="ft">a4:83:e7:2d:11:9c</span>                <span class="ft">mtu 1500</span>
+
+  <span class="la">▌</span> <span class="g">VPN</span> <span class="ft">utun3</span>                                            <span class="y">up</span>
+  <span class="rl">│</span> <span class="dm">protocol</span>    WireGuard
+  <span class="rl">│</span> <span class="dm">ipv4</span>        <span class="la">10.7.0.4</span><span class="ft">/32</span>
+  <span class="rl">│</span> <span class="dm">endpoint</span>    <span class="pu">51.75.12.9</span><span class="ft">:51820</span>        <span class="ft">handshake 41s ago</span>
+
+  <span class="rl">╵</span> <span class="ft">Ethernet en5                                    no cable</span>
+  <span class="rl">╵</span> <span class="ft">Thunderbolt en4                                 inactive</span>
+
+
+  <span class="dm">DNS</span>
+    <span class="dm">servers</span>     <span class="pu">1.1.1.1</span>   <span class="pu">9.9.9.9</span>
+    <span class="dm">search</span>      otthon.lan
+    <span class="dm">proxy</span>       <span class="ft">none</span>
+
+  <span class="dm">REACHABILITY</span>
+    <span class="g">link</span> <span class="y">✓</span> <span class="rl">──</span> <span class="g">gateway</span> <span class="y">✓</span> <span class="rl">──</span> <span class="g">dns</span> <span class="y">✓</span> <span class="rl">──</span> <span class="g">http</span> <span class="y">✓</span>
+              <span class="ft">2 ms</span>         <span class="ft">11 ms</span>    <span class="ft">38 ms</span>
+    <span class="y">online</span>      <span class="ft">no captive portal, nothing filtered</span>
+
+  <span class="dm">PUBLIC ADDRESS</span>
+    <span class="dm">ipv4</span>        <span class="pu">84.21.7.113</span>
+    <span class="dm">network</span>     <span class="g">Magyar Telekom</span>                    <span class="ft">AS5483</span>
+    <span class="dm">location</span>    Budapest, Hungary       <span class="ft">47.498, 19.040 ±20 km</span>
+    <span class="dm">timezone</span>    Europe/Budapest      <span class="ft">matches the system clock</span>
+
+  <span class="ft">↑ 0.4.0 available</span>                     <span class="ac">netinspect self-update</span></pre>
+</div>
+
+<div class="tw w" style="--bg:#faf8f3">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">Paper</span></div>
+<pre>  <span class="g">netinspect</span> <span class="ft">0.3.1</span>                          <span class="ft">14:22:07 CEST</span>
+
+  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                                     <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">network</span>     <span class="g">Otthon_5G</span>                  <span class="g">▇▇▇▇</span><span class="rl">▁</span> <span class="ft">−48 dBm</span>
+  <span class="rl">│</span> <span class="dm">          </span>  <span class="ft">Wi-Fi 6E · 1200 Mb/s · via networksetup</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>        <span class="la">192.168.1.24</span><span class="ft">/24</span>       <span class="ft">dhcp, renews in 4h 12m</span>
+  <span class="rl">│</span> <span class="dm">ipv6</span>        <span class="la">fe80::1c4d:8a2f:9b01:3e77</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>     <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">hardware</span>    <span class="ft">a4:83:e7:2d:11:9c</span>                <span class="ft">mtu 1500</span>
+
+  <span class="la">▌</span> <span class="g">VPN</span> <span class="ft">utun3</span>                                            <span class="y">up</span>
+  <span class="rl">│</span> <span class="dm">protocol</span>    WireGuard
+  <span class="rl">│</span> <span class="dm">ipv4</span>        <span class="la">10.7.0.4</span><span class="ft">/32</span>
+  <span class="rl">│</span> <span class="dm">endpoint</span>    <span class="pu">51.75.12.9</span><span class="ft">:51820</span>        <span class="ft">handshake 41s ago</span>
+
+  <span class="rl">╵</span> <span class="ft">Ethernet en5                                    no cable</span>
+  <span class="rl">╵</span> <span class="ft">Thunderbolt en4                                 inactive</span>
+
+
+  <span class="dm">DNS</span>
+    <span class="dm">servers</span>     <span class="pu">1.1.1.1</span>   <span class="pu">9.9.9.9</span>
+    <span class="dm">search</span>      otthon.lan
+    <span class="dm">proxy</span>       <span class="ft">none</span>
+
+  <span class="dm">REACHABILITY</span>
+    <span class="g">link</span> <span class="y">✓</span> <span class="rl">──</span> <span class="g">gateway</span> <span class="y">✓</span> <span class="rl">──</span> <span class="g">dns</span> <span class="y">✓</span> <span class="rl">──</span> <span class="g">http</span> <span class="y">✓</span>
+              <span class="ft">2 ms</span>         <span class="ft">11 ms</span>    <span class="ft">38 ms</span>
+    <span class="y">online</span>      <span class="ft">no captive portal, nothing filtered</span>
+
+  <span class="dm">PUBLIC ADDRESS</span>
+    <span class="dm">ipv4</span>        <span class="pu">84.21.7.113</span>
+    <span class="dm">network</span>     <span class="g">Magyar Telekom</span>                    <span class="ft">AS5483</span>
+    <span class="dm">location</span>    Budapest, Hungary       <span class="ft">47.498, 19.040 ±20 km</span>
+    <span class="dm">timezone</span>    Europe/Budapest      <span class="ft">matches the system clock</span>
+
+  <span class="ft">↑ 0.4.0 available</span>                     <span class="ac">netinspect self-update</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="4b">
+<div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Ugyanaz a blokk nyolc témán — a hue mindenhol ugyanaz a jelentés, csak a világossága hangolt</div>
+<div class="mx">
+
+<div class="tw flat k" style="--bg:#0e0e11;--bright:#f2f0e9;--body:#b9b7af;--dim:#7f7d76;--faint:#575550;--rule:#2a2b30;--ok:#8cc96f;--er:#f2705f;--loc:#7fb0e8;--lan:#45bba0;--pub:#ebab45;--act:#bca2f5">
+<div class="thname">Ink · #0E0E11</div>
+<pre>  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>      <span class="la">192.168.1.24</span><span class="ft">/24</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>   <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">public</span>    <span class="pu">84.21.7.113</span>   <span class="ft">AS5483</span>
+  <span class="rl">│</span> <span class="dm">local</span>     <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>
+  <span class="rl">│</span> <span class="dm">exposed</span>   <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>
+  <span class="rl">╵</span> <span class="y">✓</span> <span class="ft">online</span>   <span class="n">✗</span> <span class="ft">dns</span>   <span class="ac">self-update</span></pre>
+</div>
+
+<div class="tw flat k" style="--bg:#1c1917;--bright:#f5efe6;--body:#c0b7ab;--dim:#8a8177;--faint:#615a52;--rule:#332e2a;--ok:#93c96b;--er:#f0736a;--loc:#83aeea;--lan:#48bda2;--pub:#eeac41;--act:#c0a4f7">
+<div class="thname">Warm dark · #1C1917</div>
+<pre>  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>      <span class="la">192.168.1.24</span><span class="ft">/24</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>   <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">public</span>    <span class="pu">84.21.7.113</span>   <span class="ft">AS5483</span>
+  <span class="rl">│</span> <span class="dm">local</span>     <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>
+  <span class="rl">│</span> <span class="dm">exposed</span>   <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>
+  <span class="rl">╵</span> <span class="y">✓</span> <span class="ft">online</span>   <span class="n">✗</span> <span class="ft">dns</span>   <span class="ac">self-update</span></pre>
+</div>
+
+<div class="tw flat k" style="--bg:#14181f;--bright:#eef1f5;--body:#b3bac6;--dim:#7c848f;--faint:#565d67;--rule:#272d37;--ok:#8ecb74;--er:#f4736a;--loc:#82b3f0;--lan:#41bfa6;--pub:#e9ad50;--act:#b7a5fb">
+<div class="thname">Slate · #14181F</div>
+<pre>  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>      <span class="la">192.168.1.24</span><span class="ft">/24</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>   <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">public</span>    <span class="pu">84.21.7.113</span>   <span class="ft">AS5483</span>
+  <span class="rl">│</span> <span class="dm">local</span>     <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>
+  <span class="rl">│</span> <span class="dm">exposed</span>   <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>
+  <span class="rl">╵</span> <span class="y">✓</span> <span class="ft">online</span>   <span class="n">✗</span> <span class="ft">dns</span>   <span class="ac">self-update</span></pre>
+</div>
+
+<div class="tw flat k" style="--bg:#002b36;--bright:#eee8d5;--body:#93a1a1;--dim:#7d9195;--faint:#5b7b83;--rule:#0b3b47;--ok:#8ebf3f;--er:#f0736a;--loc:#5fb2ea;--lan:#31bfa8;--pub:#dfa32c;--act:#b39af5">
+<div class="thname">Solarized dark · #002B36</div>
+<pre>  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>      <span class="la">192.168.1.24</span><span class="ft">/24</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>   <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">public</span>    <span class="pu">84.21.7.113</span>   <span class="ft">AS5483</span>
+  <span class="rl">│</span> <span class="dm">local</span>     <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>
+  <span class="rl">│</span> <span class="dm">exposed</span>   <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>
+  <span class="rl">╵</span> <span class="y">✓</span> <span class="ft">online</span>   <span class="n">✗</span> <span class="ft">dns</span>   <span class="ac">self-update</span></pre>
+</div>
+
+<div class="tw flat w" style="--bg:#faf8f3;--bright:#17161a;--body:#44423b;--dim:#78766e;--faint:#a3a097;--rule:#e0dcd1;--ok:#3f7a22;--er:#c0392b;--loc:#1f5fa8;--lan:#0f7365;--pub:#8a5a0a;--act:#6146c4">
+<div class="thname">Paper · #FAF8F3</div>
+<pre>  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>      <span class="la">192.168.1.24</span><span class="ft">/24</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>   <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">public</span>    <span class="pu">84.21.7.113</span>   <span class="ft">AS5483</span>
+  <span class="rl">│</span> <span class="dm">local</span>     <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>
+  <span class="rl">│</span> <span class="dm">exposed</span>   <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>
+  <span class="rl">╵</span> <span class="y">✓</span> <span class="ft">online</span>   <span class="n">✗</span> <span class="ft">dns</span>   <span class="ac">self-update</span></pre>
+</div>
+
+<div class="tw flat w" style="--bg:#ffffff;--bright:#111114;--body:#3d3b38;--dim:#6f6d68;--faint:#9a9893;--rule:#e6e4e0;--ok:#357017;--er:#b52f22;--loc:#14539c;--lan:#0a6659;--pub:#7d4f04;--act:#5539bd">
+<div class="thname">Pure white · #FFFFFF</div>
+<pre>  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>      <span class="la">192.168.1.24</span><span class="ft">/24</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>   <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">public</span>    <span class="pu">84.21.7.113</span>   <span class="ft">AS5483</span>
+  <span class="rl">│</span> <span class="dm">local</span>     <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>
+  <span class="rl">│</span> <span class="dm">exposed</span>   <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>
+  <span class="rl">╵</span> <span class="y">✓</span> <span class="ft">online</span>   <span class="n">✗</span> <span class="ft">dns</span>   <span class="ac">self-update</span></pre>
+</div>
+
+<div class="tw flat w" style="--bg:#fdf6e3;--bright:#1c1e21;--body:#4b5457;--dim:#7a8385;--faint:#a0a69f;--rule:#e6ddc6;--ok:#4a7a12;--er:#bc3b2e;--loc:#19589e;--lan:#0d6f61;--pub:#8a5502;--act:#5b3fc0">
+<div class="thname">Solarized light · #FDF6E3</div>
+<pre>  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>      <span class="la">192.168.1.24</span><span class="ft">/24</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>   <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">public</span>    <span class="pu">84.21.7.113</span>   <span class="ft">AS5483</span>
+  <span class="rl">│</span> <span class="dm">local</span>     <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>
+  <span class="rl">│</span> <span class="dm">exposed</span>   <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>
+  <span class="rl">╵</span> <span class="y">✓</span> <span class="ft">online</span>   <span class="n">✗</span> <span class="ft">dns</span>   <span class="ac">self-update</span></pre>
+</div>
+
+<div class="tw flat w" style="--bg:#f1f4f7;--bright:#12161c;--body:#3c434c;--dim:#6c757e;--faint:#98a0a8;--rule:#dde2e8;--ok:#33701c;--er:#b53228;--loc:#11559f;--lan:#0a6a5c;--pub:#7f5104;--act:#5238bd">
+<div class="thname">Cool grey · #F1F4F7</div>
+<pre>  <span class="la">▌</span> <span class="g">Wi-Fi</span> <span class="ft">en0</span>                <span class="y">connected</span>
+  <span class="rl">│</span> <span class="dm">ipv4</span>      <span class="la">192.168.1.24</span><span class="ft">/24</span>
+  <span class="rl">│</span> <span class="dm">gateway</span>   <span class="la">192.168.1.1</span>
+  <span class="rl">│</span> <span class="dm">public</span>    <span class="pu">84.21.7.113</span>   <span class="ft">AS5483</span>
+  <span class="rl">│</span> <span class="dm">local</span>     <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>
+  <span class="rl">│</span> <span class="dm">exposed</span>   <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>
+  <span class="rl">╵</span> <span class="y">✓</span> <span class="ft">online</span>   <span class="n">✗</span> <span class="ft">dns</span>   <span class="ac">self-update</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="4c">
+<div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>listen a két szélső témán — tiszta fehéren és Solarized darkon</div>
+<div class="pair">
+
+<div class="tw k" style="--bg:#002b36;--bright:#eee8d5;--body:#93a1a1;--dim:#7d9195;--faint:#5b7b83;--rule:#0b3b47;--ok:#8ebf3f;--er:#f0736a;--loc:#5fb2ea;--lan:#31bfa8;--pub:#dfa32c;--act:#b39af5">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">Solarized dark</span></div>
+<pre>  <span class="ft">$</span> netinspect listen
+
+  <span class="pu">▌</span> <span class="g">reachable from the network</span>                  <span class="ft">4 sockets</span>
+  <span class="rl">│</span> <span class="dm">proto  address             process           pid</span>
+  <span class="rl">│</span> tcp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>        postgres         <span class="ft">1284</span>
+  <span class="rl">│</span> tcp    <span class="pu">[::]</span><span class="ft">:</span><span class="g">7000</span>           ControlCenter     <span class="ft">612</span>
+  <span class="rl">│</span> tcp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">22</span>          sshd                <span class="ft">1 root</span>
+  <span class="rl">│</span> udp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5353</span>        mDNSResponder     <span class="ft">271 root</span>
+
+  <span class="la">▌</span> <span class="g">bound to one interface</span>                      <span class="ft">1 socket</span>
+  <span class="rl">│</span> tcp    <span class="la">192.168.1.24</span><span class="ft">:</span><span class="g">8384</span>   syncthing        <span class="ft">2077</span>
+
+  <span class="lo">▌</span> <span class="g">this machine only</span>                           <span class="ft">3 sockets</span>
+  <span class="rl">│</span> tcp    <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>      redis-server     <span class="ft">4021</span>
+  <span class="rl">│</span> tcp    <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">3000</span>      node             <span class="ft">8830</span>
+  <span class="rl">╵</span> tcp    <span class="lo">[::1]</span><span class="ft">:</span><span class="g">631</span>           <span class="ft">—                   —</span>
+
+  <span class="dm">firewall</span>  <span class="pu">off</span>   <span class="ft">4 exposed ports accept connections</span>
+  <span class="ft">3 sockets owned by others ·</span> <span class="ac">sudo netinspect listen</span></pre>
+</div>
+
+<div class="tw w" style="--bg:#ffffff;--bright:#111114;--body:#3d3b38;--dim:#6f6d68;--faint:#9a9893;--rule:#e6e4e0;--ok:#357017;--er:#b52f22;--loc:#14539c;--lan:#0a6659;--pub:#7d4f04;--act:#5539bd">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">Pure white</span></div>
+<pre>  <span class="ft">$</span> netinspect listen
+
+  <span class="pu">▌</span> <span class="g">reachable from the network</span>                  <span class="ft">4 sockets</span>
+  <span class="rl">│</span> <span class="dm">proto  address             process           pid</span>
+  <span class="rl">│</span> tcp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>        postgres         <span class="ft">1284</span>
+  <span class="rl">│</span> tcp    <span class="pu">[::]</span><span class="ft">:</span><span class="g">7000</span>           ControlCenter     <span class="ft">612</span>
+  <span class="rl">│</span> tcp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">22</span>          sshd                <span class="ft">1 root</span>
+  <span class="rl">│</span> udp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5353</span>        mDNSResponder     <span class="ft">271 root</span>
+
+  <span class="la">▌</span> <span class="g">bound to one interface</span>                      <span class="ft">1 socket</span>
+  <span class="rl">│</span> tcp    <span class="la">192.168.1.24</span><span class="ft">:</span><span class="g">8384</span>   syncthing        <span class="ft">2077</span>
+
+  <span class="lo">▌</span> <span class="g">this machine only</span>                           <span class="ft">3 sockets</span>
+  <span class="rl">│</span> tcp    <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>      redis-server     <span class="ft">4021</span>
+  <span class="rl">│</span> tcp    <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">3000</span>      node             <span class="ft">8830</span>
+  <span class="rl">╵</span> tcp    <span class="lo">[::1]</span><span class="ft">:</span><span class="g">631</span>           <span class="ft">—                   —</span>
+
+  <span class="dm">firewall</span>  <span class="pu">off</span>   <span class="ft">4 exposed ports accept connections</span>
+  <span class="ft">3 sockets owned by others ·</span> <span class="ac">sudo netinspect listen</span></pre>
+</div>
+
+</div>
+</div>
+
+</div>
+<p class="dv-next">Következő: „vidd át a finomításokat a <a class="dv-oid" href="#3c">3c</a> és <a class="dv-oid" href="#3d">3d</a> kimenetekre is” · „a `▌` sáv helyett valami halkabb” · „mutasd a `--watch` képkockát”</p>
+</section>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Új színrendszer — a hue az elérhetőséget kódolja, nem a hangulatot</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="3a">
+<div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>A szabály: három csatorna, mindegyik egy mondatban elmondható</div>
+<div class="pair">
+
+<div class="tw k">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">legend — dark</span></div>
+<pre>  <span class="g">reach</span> <span class="ft">— minden cím a hue-jától kapja a jelentését</span>
+
+    <span class="lo">██</span>  <span class="g">this machine only</span>     <span class="ft">127.0.0.1 · ::1 · loopback</span>
+    <span class="la">██</span>  <span class="g">this network</span>         <span class="ft">192.168.· 10.· fe80:: · link#N</span>
+    <span class="pu">██</span>  <span class="g">the open internet</span>    <span class="ft">public IP · 0.0.0.0 · [::]</span>
+
+  <span class="g">state</span> <span class="ft">— csak két érték, sehol máshol nem fordul elő</span>
+
+    <span class="y">✓</span>   <span class="g">works</span>                <span class="ft">a probe answered</span>
+    <span class="n">✗</span>   <span class="g">broken</span>               <span class="ft">a probe failed</span>
+    <span class="rl">·</span>   <span class="ft">not attempted        the ladder short-circuited</span>
+
+  <span class="g">action</span> <span class="ft">— amit ki tudsz másolni a sorból</span>
+
+    <span class="ac">██</span>  <span class="g">copyable</span>             <span class="ft">login URL · self-update command</span>
+
+  <span class="ft">minden más semleges: nevek, MAC, MTU, flag-ek, mérések.</span>
+  <span class="ft">a súly hordozza a hierarchiát, nem a szín.</span></pre>
+</div>
+
+<div class="tw w">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">legend — light</span></div>
+<pre>  <span class="g">reach</span> <span class="ft">— minden cím a hue-jától kapja a jelentését</span>
+
+    <span class="lo">██</span>  <span class="g">this machine only</span>     <span class="ft">127.0.0.1 · ::1 · loopback</span>
+    <span class="la">██</span>  <span class="g">this network</span>         <span class="ft">192.168.· 10.· fe80:: · link#N</span>
+    <span class="pu">██</span>  <span class="g">the open internet</span>    <span class="ft">public IP · 0.0.0.0 · [::]</span>
+
+  <span class="g">state</span> <span class="ft">— csak két érték, sehol máshol nem fordul elő</span>
+
+    <span class="y">✓</span>   <span class="g">works</span>                <span class="ft">a probe answered</span>
+    <span class="n">✗</span>   <span class="g">broken</span>               <span class="ft">a probe failed</span>
+    <span class="rl">·</span>   <span class="ft">not attempted        the ladder short-circuited</span>
+
+  <span class="g">action</span> <span class="ft">— amit ki tudsz másolni a sorból</span>
+
+    <span class="ac">██</span>  <span class="g">copyable</span>             <span class="ft">login URL · self-update command</span>
+
+  <span class="ft">minden más semleges: nevek, MAC, MTU, flag-ek, mérések.</span>
+  <span class="ft">a súly hordozza a hierarchiát, nem a szín.</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="3b">
+<div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>A teljes riport — a bal sáv annak a felületnek a reach-színe</div>
+<div class="pair">
+
+<div class="tw k">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">netinspect — dark</span></div>
+<pre>  <span class="g">netinspect</span> <span class="ft">0.3.1</span>                          <span class="ft">14:22:07 CEST</span>
+  <span class="rl">──────────────────────────────────────────────────────────────</span>
+
+  <span class="la">▌</span>  <span class="g">Wi-Fi</span> <span class="ft">·</span> <span class="dm">en0</span>                                   <span class="y">connected</span>
+  <span class="rl">│</span>  <span class="dm">network</span>      <span class="g">Otthon_5G</span>   <span class="g">▇▇▇▇</span><span class="rl">▁</span>   <span class="ft">−48 dBm · Wi-Fi 6E</span>
+  <span class="rl">│</span>  <span class="dm">ipv4</span>         <span class="la">192.168.1.24</span><span class="ft">/24</span>     <span class="ft">dhcp · renews in 4h 12m</span>
+  <span class="rl">│</span>  <span class="dm">ipv6</span>         <span class="la">fe80::1c4d:8a2f:9b01:3e77</span>
+  <span class="rl">│</span>  <span class="dm">gateway</span>      <span class="la">192.168.1.1</span>
+  <span class="rl">│</span>  <span class="dm">hardware</span>     a4:83:e7:2d:11:9c   <span class="ft">mtu 1500</span>
+
+  <span class="la">▌</span>  <span class="g">VPN</span> <span class="ft">·</span> <span class="dm">utun3</span>                                          <span class="y">up</span>
+  <span class="rl">│</span>  <span class="dm">protocol</span>     WireGuard
+  <span class="rl">│</span>  <span class="dm">ipv4</span>         <span class="la">10.7.0.4</span><span class="ft">/32</span>
+  <span class="rl">│</span>  <span class="dm">endpoint</span>     <span class="pu">51.75.12.9</span><span class="ft">:51820</span>    <span class="ft">handshake 41s ago</span>
+
+  <span class="rl">╵</span>  <span class="ft">Ethernet · en5                                 no cable</span>
+  <span class="rl">╵</span>  <span class="ft">Thunderbolt · en4                              inactive</span>
+
+  <span class="dm">dns</span> <span class="rl">──────────────────────────────────────────────────────────</span>
+
+     <span class="dm">servers</span>      <span class="pu">1.1.1.1</span>   <span class="pu">9.9.9.9</span>
+     <span class="dm">search</span>       otthon.lan
+     <span class="dm">proxy</span>        <span class="ft">none</span>
+
+  <span class="dm">reachability</span> <span class="rl">─────────────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">gateway</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">dns</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">http</span> <span class="y">✓</span>
+                  <span class="ft">2 ms</span>          <span class="ft">11 ms</span>     <span class="ft">38 ms</span>
+
+     <span class="y">online</span>       <span class="ft">no captive portal · unrestricted</span>
+
+  <span class="dm">public address</span> <span class="rl">───────────────────────────────────────────────</span>
+
+     <span class="dm">ipv4</span>         <span class="pu">84.21.7.113</span>
+     <span class="dm">network</span>      <span class="g">Magyar Telekom</span>      <span class="ft">AS5483</span>
+     <span class="dm">location</span>     Budapest, Hungary   <span class="ft">47.498, 19.040 · ±20 km</span>
+     <span class="dm">timezone</span>     Europe/Budapest     <span class="ft">matches system clock</span>
+
+  <span class="rl">──────────────────────────────────────────────────────────────</span>
+  <span class="ft">↑ 0.4.0 available</span>                    <span class="ac">netinspect self-update</span></pre>
+</div>
+
+<div class="tw w">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">netinspect — light</span></div>
+<pre>  <span class="g">netinspect</span> <span class="ft">0.3.1</span>                          <span class="ft">14:22:07 CEST</span>
+  <span class="rl">──────────────────────────────────────────────────────────────</span>
+
+  <span class="la">▌</span>  <span class="g">Wi-Fi</span> <span class="ft">·</span> <span class="dm">en0</span>                                   <span class="y">connected</span>
+  <span class="rl">│</span>  <span class="dm">network</span>      <span class="g">Otthon_5G</span>   <span class="g">▇▇▇▇</span><span class="rl">▁</span>   <span class="ft">−48 dBm · Wi-Fi 6E</span>
+  <span class="rl">│</span>  <span class="dm">ipv4</span>         <span class="la">192.168.1.24</span><span class="ft">/24</span>     <span class="ft">dhcp · renews in 4h 12m</span>
+  <span class="rl">│</span>  <span class="dm">ipv6</span>         <span class="la">fe80::1c4d:8a2f:9b01:3e77</span>
+  <span class="rl">│</span>  <span class="dm">gateway</span>      <span class="la">192.168.1.1</span>
+  <span class="rl">│</span>  <span class="dm">hardware</span>     a4:83:e7:2d:11:9c   <span class="ft">mtu 1500</span>
+
+  <span class="la">▌</span>  <span class="g">VPN</span> <span class="ft">·</span> <span class="dm">utun3</span>                                          <span class="y">up</span>
+  <span class="rl">│</span>  <span class="dm">protocol</span>     WireGuard
+  <span class="rl">│</span>  <span class="dm">ipv4</span>         <span class="la">10.7.0.4</span><span class="ft">/32</span>
+  <span class="rl">│</span>  <span class="dm">endpoint</span>     <span class="pu">51.75.12.9</span><span class="ft">:51820</span>    <span class="ft">handshake 41s ago</span>
+
+  <span class="rl">╵</span>  <span class="ft">Ethernet · en5                                 no cable</span>
+  <span class="rl">╵</span>  <span class="ft">Thunderbolt · en4                              inactive</span>
+
+  <span class="dm">dns</span> <span class="rl">──────────────────────────────────────────────────────────</span>
+
+     <span class="dm">servers</span>      <span class="pu">1.1.1.1</span>   <span class="pu">9.9.9.9</span>
+     <span class="dm">search</span>       otthon.lan
+     <span class="dm">proxy</span>        <span class="ft">none</span>
+
+  <span class="dm">reachability</span> <span class="rl">─────────────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">gateway</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">dns</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">http</span> <span class="y">✓</span>
+                  <span class="ft">2 ms</span>          <span class="ft">11 ms</span>     <span class="ft">38 ms</span>
+
+     <span class="y">online</span>       <span class="ft">no captive portal · unrestricted</span>
+
+  <span class="dm">public address</span> <span class="rl">───────────────────────────────────────────────</span>
+
+     <span class="dm">ipv4</span>         <span class="pu">84.21.7.113</span>
+     <span class="dm">network</span>      <span class="g">Magyar Telekom</span>      <span class="ft">AS5483</span>
+     <span class="dm">location</span>     Budapest, Hungary   <span class="ft">47.498, 19.040 · ±20 km</span>
+     <span class="dm">timezone</span>     Europe/Budapest     <span class="ft">matches system clock</span>
+
+  <span class="rl">──────────────────────────────────────────────────────────────</span>
+  <span class="ft">↑ 0.4.0 available</span>                    <span class="ac">netinspect self-update</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="3c">
+<div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>listen — itt fizet a rendszer: a borostyán sorok azok, amiket kívülről elérnek</div>
+<div class="pair">
+
+<div class="tw k">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">listen — dark</span></div>
+<pre>  <span class="ft">$</span> netinspect listen
+
+  <span class="dm">listening</span> <span class="rl">────────────────────────────────────────────────</span>
+
+  <span class="pu">▌</span>  <span class="g">reachable from the network</span>                    <span class="ft">4 sockets</span>
+  <span class="rl">│</span>  <span class="dm">proto  address              process            pid</span>
+  <span class="rl">│</span>  tcp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>         postgres          <span class="ft">1284</span>
+  <span class="rl">│</span>  tcp    <span class="pu">[::]</span><span class="ft">:</span><span class="g">7000</span>            ControlCenter      <span class="ft">612</span>
+  <span class="rl">│</span>  tcp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">22</span>           sshd                 <span class="ft">1 ·root</span>
+  <span class="rl">│</span>  udp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5353</span>         mDNSResponder      <span class="ft">271 ·root</span>
+
+  <span class="la">▌</span>  <span class="g">bound to one interface</span>                        <span class="ft">1 socket</span>
+  <span class="rl">│</span>  tcp    <span class="la">192.168.1.24</span><span class="ft">:</span><span class="g">8384</span>    syncthing         <span class="ft">2077</span>
+
+  <span class="lo">▌</span>  <span class="g">this machine only</span>                             <span class="ft">3 sockets</span>
+  <span class="rl">│</span>  tcp    <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>       redis-server      <span class="ft">4021</span>
+  <span class="rl">│</span>  tcp    <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">3000</span>       node              <span class="ft">8830</span>
+  <span class="rl">│</span>  tcp    <span class="lo">[::1]</span><span class="ft">:</span><span class="g">631</span>            <span class="ft">—                     —</span>
+
+  <span class="rl">──────────────────────────────────────────────────────────────</span>
+  <span class="ft">3 sockets owned by other users ·</span> <span class="ac">sudo netinspect listen</span>
+  <span class="dm">application firewall</span>  <span class="pu">off</span>  <span class="ft">— the 4 exposed ports accept</span>
+                        <span class="ft">connections</span></pre>
+</div>
+
+<div class="tw w">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">listen — light</span></div>
+<pre>  <span class="ft">$</span> netinspect listen
+
+  <span class="dm">listening</span> <span class="rl">────────────────────────────────────────────────</span>
+
+  <span class="pu">▌</span>  <span class="g">reachable from the network</span>                    <span class="ft">4 sockets</span>
+  <span class="rl">│</span>  <span class="dm">proto  address              process            pid</span>
+  <span class="rl">│</span>  tcp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5432</span>         postgres          <span class="ft">1284</span>
+  <span class="rl">│</span>  tcp    <span class="pu">[::]</span><span class="ft">:</span><span class="g">7000</span>            ControlCenter      <span class="ft">612</span>
+  <span class="rl">│</span>  tcp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">22</span>           sshd                 <span class="ft">1 ·root</span>
+  <span class="rl">│</span>  udp    <span class="pu">0.0.0.0</span><span class="ft">:</span><span class="g">5353</span>         mDNSResponder      <span class="ft">271 ·root</span>
+
+  <span class="la">▌</span>  <span class="g">bound to one interface</span>                        <span class="ft">1 socket</span>
+  <span class="rl">│</span>  tcp    <span class="la">192.168.1.24</span><span class="ft">:</span><span class="g">8384</span>    syncthing         <span class="ft">2077</span>
+
+  <span class="lo">▌</span>  <span class="g">this machine only</span>                             <span class="ft">3 sockets</span>
+  <span class="rl">│</span>  tcp    <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">6379</span>       redis-server      <span class="ft">4021</span>
+  <span class="rl">│</span>  tcp    <span class="lo">127.0.0.1</span><span class="ft">:</span><span class="g">3000</span>       node              <span class="ft">8830</span>
+  <span class="rl">│</span>  tcp    <span class="lo">[::1]</span><span class="ft">:</span><span class="g">631</span>            <span class="ft">—                     —</span>
+
+  <span class="rl">──────────────────────────────────────────────────────────────</span>
+  <span class="ft">3 sockets owned by other users ·</span> <span class="ac">sudo netinspect listen</span>
+  <span class="dm">application firewall</span>  <span class="pu">off</span>  <span class="ft">— the 4 exposed ports accept</span>
+                        <span class="ft">connections</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="3d">
+<div class="dv-olabel"><a class="dv-oid" href="#3d">3d</a>routes — a gateway hue-ja mutatja, hova visz az útvonal</div>
+<div class="pair">
+
+<div class="tw k">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">routes — dark</span></div>
+<pre>  <span class="ft">$</span> netinspect routes
+
+  <span class="dm">ipv4</span> <span class="rl">─────────────────────────────────────────────────────────</span>
+
+     <span class="dm">destination         gateway            iface    flags</span>
+     <span class="g">default</span>             <span class="la">192.168.1.1</span>        en0      <span class="ft">UGScg</span>
+     <span class="la">10.7.0.0</span><span class="ft">/24</span>         <span class="ft">link#18</span>            utun3    <span class="ft">USc</span>
+     <span class="lo">127.0.0.0</span><span class="ft">/8</span>         <span class="ft">link#1</span>             lo0      <span class="ft">UCS</span>
+     <span class="la">192.168.1.0</span><span class="ft">/24</span>      <span class="ft">link#12</span>            en0      <span class="ft">UCS</span>
+     <span class="la">224.0.0.0</span><span class="ft">/4</span>         <span class="ft">link#12</span>            en0      <span class="ft">UmCS</span>
+
+  <span class="dm">ipv6</span> <span class="rl">─────────────────────────────────────────────────────────</span>
+
+     <span class="g">default</span>             <span class="la">fe80::1%en0</span>        en0      <span class="ft">UGcg</span>
+     <span class="lo">::1</span>                 <span class="ft">lo0</span>                lo0      <span class="ft">UHL</span>
+     <span class="la">fe80::</span><span class="ft">/64</span>           <span class="ft">link#12</span>            en0      <span class="ft">UCI</span>
+
+  <span class="rl">──────────────────────────────────────────────────────────────</span>
+  <span class="g">9 routes</span>   <span class="ft">2 default gateways · split tunnel active</span></pre>
+</div>
+
+<div class="tw w">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">routes — light</span></div>
+<pre>  <span class="ft">$</span> netinspect routes
+
+  <span class="dm">ipv4</span> <span class="rl">─────────────────────────────────────────────────────────</span>
+
+     <span class="dm">destination         gateway            iface    flags</span>
+     <span class="g">default</span>             <span class="la">192.168.1.1</span>        en0      <span class="ft">UGScg</span>
+     <span class="la">10.7.0.0</span><span class="ft">/24</span>         <span class="ft">link#18</span>            utun3    <span class="ft">USc</span>
+     <span class="lo">127.0.0.0</span><span class="ft">/8</span>         <span class="ft">link#1</span>             lo0      <span class="ft">UCS</span>
+     <span class="la">192.168.1.0</span><span class="ft">/24</span>      <span class="ft">link#12</span>            en0      <span class="ft">UCS</span>
+     <span class="la">224.0.0.0</span><span class="ft">/4</span>         <span class="ft">link#12</span>            en0      <span class="ft">UmCS</span>
+
+  <span class="dm">ipv6</span> <span class="rl">─────────────────────────────────────────────────────────</span>
+
+     <span class="g">default</span>             <span class="la">fe80::1%en0</span>        en0      <span class="ft">UGcg</span>
+     <span class="lo">::1</span>                 <span class="ft">lo0</span>                lo0      <span class="ft">UHL</span>
+     <span class="la">fe80::</span><span class="ft">/64</span>           <span class="ft">link#12</span>            en0      <span class="ft">UCI</span>
+
+  <span class="rl">──────────────────────────────────────────────────────────────</span>
+  <span class="g">9 routes</span>   <span class="ft">2 default gateways · split tunnel active</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="3e">
+<div class="dv-olabel"><a class="dv-oid" href="#3e">3e</a>A négy offline mód — piros csak a tényleges hibán, a meg nem kísérelt lépcső halvány</div>
+<div class="pair">
+
+<div class="tw k">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">states — dark</span></div>
+<pre>  <span class="dm">captive portal</span> <span class="rl">───────────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">gateway</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">dns</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">http</span> <span class="pu">◐</span>
+                  <span class="ft">3 ms</span>          <span class="ft">14 ms</span>     <span class="ft">302</span>
+
+     <span class="pu">captive portal</span>   <span class="ft">the network answers, the internet does not</span>
+     <span class="ac">http://wifi.mav-start.hu/login</span>
+
+  <span class="dm">dns failure</span> <span class="rl">──────────────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">gateway</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">dns</span> <span class="n">✗</span> <span class="rl">─── http ·</span>
+                  <span class="ft">2 ms</span>          <span class="ft">timeout</span>
+
+     <span class="n">dns failure</span>      <span class="ft">1.1.1.1 did not answer in 2000 ms · exit 12</span>
+
+  <span class="dm">gateway unreachable</span> <span class="rl">──────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">gateway</span> <span class="n">✗</span> <span class="rl">─── dns · ─── http ·</span>
+                  <span class="ft">no reply</span>
+
+     <span class="n">gateway unreachable</span>  <span class="ft">192.168.1.1 · exit 11</span>
+
+  <span class="dm">link down</span> <span class="rl">────────────────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="n">✗</span> <span class="rl">─── gateway · ─── dns · ─── http ·</span>
+
+     <span class="n">link down</span>        <span class="ft">no interface has a carrier · exit 10</span>
+
+  <span class="dm">vpn leak</span> <span class="rl">─────────────────────────────────────────────────────</span>
+
+     <span class="dm">ipv4</span>         <span class="pu">84.21.7.113</span>       <span class="n">✗ not routed through VPN</span>
+     <span class="dm">network</span>      <span class="g">Magyar Telekom</span>    <span class="ft">AS5483 · utun3 is up</span></pre>
+</div>
+
+<div class="tw w">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">states — light</span></div>
+<pre>  <span class="dm">captive portal</span> <span class="rl">───────────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">gateway</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">dns</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">http</span> <span class="pu">◐</span>
+                  <span class="ft">3 ms</span>          <span class="ft">14 ms</span>     <span class="ft">302</span>
+
+     <span class="pu">captive portal</span>   <span class="ft">the network answers, the internet does not</span>
+     <span class="ac">http://wifi.mav-start.hu/login</span>
+
+  <span class="dm">dns failure</span> <span class="rl">──────────────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">gateway</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">dns</span> <span class="n">✗</span> <span class="rl">─── http ·</span>
+                  <span class="ft">2 ms</span>          <span class="ft">timeout</span>
+
+     <span class="n">dns failure</span>      <span class="ft">1.1.1.1 did not answer in 2000 ms · exit 12</span>
+
+  <span class="dm">gateway unreachable</span> <span class="rl">──────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="y">✓</span> <span class="rl">───</span> <span class="g">gateway</span> <span class="n">✗</span> <span class="rl">─── dns · ─── http ·</span>
+                  <span class="ft">no reply</span>
+
+     <span class="n">gateway unreachable</span>  <span class="ft">192.168.1.1 · exit 11</span>
+
+  <span class="dm">link down</span> <span class="rl">────────────────────────────────────────────────────</span>
+
+     <span class="g">link</span> <span class="n">✗</span> <span class="rl">─── gateway · ─── dns · ─── http ·</span>
+
+     <span class="n">link down</span>        <span class="ft">no interface has a carrier · exit 10</span>
+
+  <span class="dm">vpn leak</span> <span class="rl">─────────────────────────────────────────────────────</span>
+
+     <span class="dm">ipv4</span>         <span class="pu">84.21.7.113</span>       <span class="n">✗ not routed through VPN</span>
+     <span class="dm">network</span>      <span class="g">Magyar Telekom</span>    <span class="ft">AS5483 · utun3 is up</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="3f">
+<div class="dv-olabel"><a class="dv-oid" href="#3f">3f</a>Ahol nincs szín — --no-color, --ascii, 48 oszlop, --json</div>
+<div class="pair">
+
+<div class="tw k">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">fallbacks — dark</span></div>
+<pre>  <span class="ft">$</span> netinspect <span class="ft">--ascii --no-color</span>        <span class="ft">48 cols</span>
+
+  netinspect 0.3.1               14:22:07
+  ---------------------------------------
+  |  Wi-Fi | en0            [connected]
+  |  network
+  |    &lt;SSID unavailable&gt;
+  |  ipv4
+  |    192.168.1.24/24
+  |    dhcp | renews in 4h 12m
+  |  gateway
+  |    192.168.1.1
+  .  Ethernet | en5          [no cable]
+
+  reachability --------------------------
+     link ok - gateway ok - dns ok
+     http ok
+     [online] no captive portal
+
+  <span class="ft">a reach-kódolás itt szerkezetté válik: a csoportcím</span>
+  <span class="ft">viszi a jelentést, amit a szín vitt.</span>
+
+  <span class="ft">$</span> netinspect <span class="ft">--json | jq .reachability</span>
+
+  <span class="ft">{</span> <span class="lo">"link"</span><span class="ft">:</span>    <span class="ft">{</span> <span class="lo">"ok"</span><span class="ft">:</span> <span class="y">true</span><span class="ft">,</span> <span class="lo">"ms"</span><span class="ft">:</span> <span class="ft">null</span> <span class="ft">},</span>
+    <span class="lo">"gateway"</span><span class="ft">:</span> <span class="ft">{</span> <span class="lo">"ok"</span><span class="ft">:</span> <span class="y">true</span><span class="ft">,</span> <span class="lo">"ms"</span><span class="ft">:</span> <span class="g">2</span> <span class="ft">},</span>
+    <span class="lo">"dns"</span><span class="ft">:</span>     <span class="ft">{</span> <span class="lo">"ok"</span><span class="ft">:</span> <span class="y">true</span><span class="ft">,</span> <span class="lo">"ms"</span><span class="ft">:</span> <span class="g">11</span> <span class="ft">},</span>
+    <span class="lo">"http"</span><span class="ft">:</span>    <span class="ft">{</span> <span class="lo">"ok"</span><span class="ft">:</span> <span class="y">true</span><span class="ft">,</span> <span class="lo">"ms"</span><span class="ft">:</span> <span class="g">38</span><span class="ft">,</span> <span class="lo">"status"</span><span class="ft">:</span> <span class="g">204</span> <span class="ft">},</span>
+    <span class="lo">"state"</span><span class="ft">:</span> <span class="g">"online"</span> <span class="ft">}</span>
+
+  <span class="ft">$</span> netinspect check <span class="ft">&amp;&amp; echo up</span>
+  up</pre>
+</div>
+
+<div class="tw w">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name dm">fallbacks — light</span></div>
+<pre>  <span class="ft">$</span> netinspect <span class="ft">--ascii --no-color</span>        <span class="ft">48 cols</span>
+
+  netinspect 0.3.1               14:22:07
+  ---------------------------------------
+  |  Wi-Fi | en0            [connected]
+  |  network
+  |    &lt;SSID unavailable&gt;
+  |  ipv4
+  |    192.168.1.24/24
+  |    dhcp | renews in 4h 12m
+  |  gateway
+  |    192.168.1.1
+  .  Ethernet | en5          [no cable]
+
+  reachability --------------------------
+     link ok - gateway ok - dns ok
+     http ok
+     [online] no captive portal
+
+  <span class="ft">a reach-kódolás itt szerkezetté válik: a csoportcím</span>
+  <span class="ft">viszi a jelentést, amit a szín vitt.</span>
+
+  <span class="ft">$</span> netinspect <span class="ft">--json | jq .reachability</span>
+
+  <span class="ft">{</span> <span class="lo">"link"</span><span class="ft">:</span>    <span class="ft">{</span> <span class="lo">"ok"</span><span class="ft">:</span> <span class="y">true</span><span class="ft">,</span> <span class="lo">"ms"</span><span class="ft">:</span> <span class="ft">null</span> <span class="ft">},</span>
+    <span class="lo">"gateway"</span><span class="ft">:</span> <span class="ft">{</span> <span class="lo">"ok"</span><span class="ft">:</span> <span class="y">true</span><span class="ft">,</span> <span class="lo">"ms"</span><span class="ft">:</span> <span class="g">2</span> <span class="ft">},</span>
+    <span class="lo">"dns"</span><span class="ft">:</span>     <span class="ft">{</span> <span class="lo">"ok"</span><span class="ft">:</span> <span class="y">true</span><span class="ft">,</span> <span class="lo">"ms"</span><span class="ft">:</span> <span class="g">11</span> <span class="ft">},</span>
+    <span class="lo">"http"</span><span class="ft">:</span>    <span class="ft">{</span> <span class="lo">"ok"</span><span class="ft">:</span> <span class="y">true</span><span class="ft">,</span> <span class="lo">"ms"</span><span class="ft">:</span> <span class="g">38</span><span class="ft">,</span> <span class="lo">"status"</span><span class="ft">:</span> <span class="g">204</span> <span class="ft">},</span>
+    <span class="lo">"state"</span><span class="ft">:</span> <span class="g">"online"</span> <span class="ft">}</span>
+
+  <span class="ft">$</span> netinspect check <span class="ft">&amp;&amp; echo up</span>
+  up</pre>
+</div>
+
+</div>
+</div>
+
+</div>
+<p class="dv-next">Következő: „a DNS-szerverek maradjanak semlegesek, ne borostyánok” · „<a class="dv-oid" href="#3b">3b</a> bal sáv nélkül” · „a reach-hue-t vidd rá a `--watch` képkockára is”</p>
+</section>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">netinspect 0.3.1 — tisztán nyomtatható CLI kimenet, két tipográfiai irány</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Rail — interfészenként színes bal sáv, szekciócím + hajszálvonal</div>
+<div class="pair">
+
+<div class="tw dark">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">netinspect — dark</span></div>
+<pre>  <span class="b">netinspect</span>                           <span class="f">0.3.1 · 14:22:07 CEST</span>
+  <span class="r">──────────────────────────────────────────────────────────────</span>
+
+  <span class="ok">▌</span>  <span class="b">Wi-Fi</span> <span class="f">·</span> <span class="d">en0</span>                                   <span class="ok">connected</span>
+  <span class="r">│</span>  <span class="d">network</span>      <span class="b">Otthon_5G</span>  <span class="ok">▇▇▇▇</span><span class="r">▁</span>    <span class="f">−48 dBm · Wi-Fi 6E</span>
+  <span class="r">│</span>  <span class="d">ipv4</span>         <span class="va">192.168.1.24</span><span class="f">/24</span>     <span class="f">dhcp · renews in 4h 12m</span>
+  <span class="r">│</span>  <span class="d">ipv6</span>         <span class="va">fe80::1c4d:8a2f:9b01:3e77</span>
+  <span class="r">│</span>  <span class="d">gateway</span>      <span class="va">192.168.1.1</span>
+  <span class="r">│</span>  <span class="d">hardware</span>     a4:83:e7:2d:11:9c   <span class="f">mtu 1500</span>
+
+  <span class="li">▌</span>  <span class="b">VPN</span> <span class="f">·</span> <span class="d">utun3</span>                                          <span class="ok">up</span>
+  <span class="r">│</span>  <span class="d">protocol</span>     WireGuard
+  <span class="r">│</span>  <span class="d">ipv4</span>         <span class="va">10.7.0.4</span><span class="f">/32</span>
+  <span class="r">│</span>  <span class="d">endpoint</span>     <span class="va">51.75.12.9</span><span class="f">:51820</span>    <span class="f">handshake 41s ago</span>
+
+  <span class="r">○</span>  <span class="f">Ethernet · en5                                 no cable</span>
+  <span class="r">○</span>  <span class="f">Thunderbolt · en4                              inactive</span>
+
+  <span class="d">dns</span> <span class="r">──────────────────────────────────────────────────────────</span>
+
+     <span class="d">servers</span>      <span class="va">1.1.1.1</span>  <span class="f">·</span>  <span class="va">9.9.9.9</span>
+     <span class="d">search</span>       otthon.lan
+     <span class="d">proxy</span>        <span class="f">none</span>
+
+  <span class="d">reachability</span> <span class="r">─────────────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">gateway</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">dns</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">http</span> <span class="ok">✓</span>
+                  <span class="f">2 ms</span>          <span class="f">11 ms</span>     <span class="f">38 ms</span>
+
+     <span class="ok">online</span>  <span class="f">no captive portal · unrestricted</span>
+
+  <span class="d">public address</span> <span class="r">───────────────────────────────────────────────</span>
+
+     <span class="d">ipv4</span>         <span class="va">84.21.7.113</span>
+     <span class="d">network</span>      <span class="b">Magyar Telekom</span>      <span class="f">AS5483</span>
+     <span class="d">location</span>     Budapest, Hungary   <span class="f">47.498, 19.040 · ±20 km</span>
+     <span class="d">timezone</span>     Europe/Budapest     <span class="f">matches system clock</span>
+
+  <span class="r">──────────────────────────────────────────────────────────────</span>
+  <span class="li">↑</span>  <span class="b">0.4.0</span> <span class="f">available ·</span> <span class="li">netinspect self-update</span></pre>
+</div>
+
+<div class="tw light">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">netinspect — light</span></div>
+<pre>  <span class="b">netinspect</span>                           <span class="f">0.3.1 · 14:22:07 CEST</span>
+  <span class="r">──────────────────────────────────────────────────────────────</span>
+
+  <span class="ok">▌</span>  <span class="b">Wi-Fi</span> <span class="f">·</span> <span class="d">en0</span>                                   <span class="ok">connected</span>
+  <span class="r">│</span>  <span class="d">network</span>      <span class="b">Otthon_5G</span>  <span class="ok">▇▇▇▇</span><span class="r">▁</span>    <span class="f">−48 dBm · Wi-Fi 6E</span>
+  <span class="r">│</span>  <span class="d">ipv4</span>         <span class="va">192.168.1.24</span><span class="f">/24</span>     <span class="f">dhcp · renews in 4h 12m</span>
+  <span class="r">│</span>  <span class="d">ipv6</span>         <span class="va">fe80::1c4d:8a2f:9b01:3e77</span>
+  <span class="r">│</span>  <span class="d">gateway</span>      <span class="va">192.168.1.1</span>
+  <span class="r">│</span>  <span class="d">hardware</span>     a4:83:e7:2d:11:9c   <span class="f">mtu 1500</span>
+
+  <span class="li">▌</span>  <span class="b">VPN</span> <span class="f">·</span> <span class="d">utun3</span>                                          <span class="ok">up</span>
+  <span class="r">│</span>  <span class="d">protocol</span>     WireGuard
+  <span class="r">│</span>  <span class="d">ipv4</span>         <span class="va">10.7.0.4</span><span class="f">/32</span>
+  <span class="r">│</span>  <span class="d">endpoint</span>     <span class="va">51.75.12.9</span><span class="f">:51820</span>    <span class="f">handshake 41s ago</span>
+
+  <span class="r">○</span>  <span class="f">Ethernet · en5                                 no cable</span>
+  <span class="r">○</span>  <span class="f">Thunderbolt · en4                              inactive</span>
+
+  <span class="d">dns</span> <span class="r">──────────────────────────────────────────────────────────</span>
+
+     <span class="d">servers</span>      <span class="va">1.1.1.1</span>  <span class="f">·</span>  <span class="va">9.9.9.9</span>
+     <span class="d">search</span>       otthon.lan
+     <span class="d">proxy</span>        <span class="f">none</span>
+
+  <span class="d">reachability</span> <span class="r">─────────────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">gateway</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">dns</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">http</span> <span class="ok">✓</span>
+                  <span class="f">2 ms</span>          <span class="f">11 ms</span>     <span class="f">38 ms</span>
+
+     <span class="ok">online</span>  <span class="f">no captive portal · unrestricted</span>
+
+  <span class="d">public address</span> <span class="r">───────────────────────────────────────────────</span>
+
+     <span class="d">ipv4</span>         <span class="va">84.21.7.113</span>
+     <span class="d">network</span>      <span class="b">Magyar Telekom</span>      <span class="f">AS5483</span>
+     <span class="d">location</span>     Budapest, Hungary   <span class="f">47.498, 19.040 · ±20 km</span>
+     <span class="d">timezone</span>     Europe/Budapest     <span class="f">matches system clock</span>
+
+  <span class="r">──────────────────────────────────────────────────────────────</span>
+  <span class="li">↑</span>  <span class="b">0.4.0</span> <span class="f">available ·</span> <span class="li">netinspect self-update</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="2b">
+<div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Air — nulla vonal, jobbra igazított szekciócímek, minden a ritmuson múlik</div>
+<div class="pair">
+
+<div class="tw dark">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">netinspect — dark</span></div>
+<pre>  <span class="b">netinspect</span> <span class="f">0.3.1</span>                                <span class="f">14:22:07</span>
+
+
+  <span class="b">Wi-Fi</span> <span class="f">·</span> <span class="d">en0</span>                                      <span class="ok">connected</span>
+
+    <span class="d">network</span>        <span class="b">Otthon_5G</span>   <span class="ok">▇▇▇▇</span><span class="r">▁</span>  <span class="f">−48 dBm · Wi-Fi 6E</span>
+    <span class="d">ipv4</span>           <span class="va">192.168.1.24</span><span class="f">/24</span>    <span class="f">dhcp · renews in 4h 12m</span>
+    <span class="d">ipv6</span>           <span class="va">fe80::1c4d:8a2f:9b01:3e77</span>
+    <span class="d">gateway</span>        <span class="va">192.168.1.1</span>
+    <span class="d">hardware</span>       a4:83:e7:2d:11:9c  <span class="f">mtu 1500</span>
+
+
+  <span class="b">VPN</span> <span class="f">·</span> <span class="d">utun3</span>                                             <span class="ok">up</span>
+
+    <span class="d">protocol</span>       WireGuard
+    <span class="d">ipv4</span>           <span class="va">10.7.0.4</span><span class="f">/32</span>
+    <span class="d">endpoint</span>       <span class="va">51.75.12.9</span><span class="f">:51820</span>   <span class="f">handshake 41s ago</span>
+
+
+  <span class="f">Ethernet · en5                                     no cable</span>
+  <span class="f">Thunderbolt · en4                                  inactive</span>
+
+
+                                                              <span class="d">dns</span>
+
+    <span class="d">servers</span>        <span class="va">1.1.1.1</span>  <span class="f">·</span>  <span class="va">9.9.9.9</span>
+    <span class="d">search</span>         otthon.lan
+    <span class="d">proxy</span>          <span class="f">none</span>
+
+
+                                                     <span class="d">reachability</span>
+
+    <span class="b">link</span> <span class="ok">✓</span>   <span class="b">gateway</span> <span class="ok">✓</span>   <span class="b">dns</span> <span class="ok">✓</span>   <span class="b">http</span> <span class="ok">✓</span>
+             <span class="f">2 ms</span>        <span class="f">11 ms</span>      <span class="f">38 ms</span>
+
+    <span class="ok">online</span>         <span class="f">no captive portal · unrestricted</span>
+
+
+                                                   <span class="d">public address</span>
+
+    <span class="d">ipv4</span>           <span class="va">84.21.7.113</span>
+    <span class="d">network</span>        <span class="b">Magyar Telekom</span>     <span class="f">AS5483</span>
+    <span class="d">location</span>       Budapest, Hungary  <span class="f">47.498, 19.040 · ±20 km</span>
+    <span class="d">timezone</span>       Europe/Budapest    <span class="f">matches system clock</span>
+
+
+  <span class="li">↑</span> <span class="b">0.4.0</span> <span class="f">available</span>                    <span class="li">netinspect self-update</span></pre>
+</div>
+
+<div class="tw light">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">netinspect — light</span></div>
+<pre>  <span class="b">netinspect</span> <span class="f">0.3.1</span>                                <span class="f">14:22:07</span>
+
+
+  <span class="b">Wi-Fi</span> <span class="f">·</span> <span class="d">en0</span>                                      <span class="ok">connected</span>
+
+    <span class="d">network</span>        <span class="b">Otthon_5G</span>   <span class="ok">▇▇▇▇</span><span class="r">▁</span>  <span class="f">−48 dBm · Wi-Fi 6E</span>
+    <span class="d">ipv4</span>           <span class="va">192.168.1.24</span><span class="f">/24</span>    <span class="f">dhcp · renews in 4h 12m</span>
+    <span class="d">ipv6</span>           <span class="va">fe80::1c4d:8a2f:9b01:3e77</span>
+    <span class="d">gateway</span>        <span class="va">192.168.1.1</span>
+    <span class="d">hardware</span>       a4:83:e7:2d:11:9c  <span class="f">mtu 1500</span>
+
+
+  <span class="b">VPN</span> <span class="f">·</span> <span class="d">utun3</span>                                             <span class="ok">up</span>
+
+    <span class="d">protocol</span>       WireGuard
+    <span class="d">ipv4</span>           <span class="va">10.7.0.4</span><span class="f">/32</span>
+    <span class="d">endpoint</span>       <span class="va">51.75.12.9</span><span class="f">:51820</span>   <span class="f">handshake 41s ago</span>
+
+
+  <span class="f">Ethernet · en5                                     no cable</span>
+  <span class="f">Thunderbolt · en4                                  inactive</span>
+
+
+                                                              <span class="d">dns</span>
+
+    <span class="d">servers</span>        <span class="va">1.1.1.1</span>  <span class="f">·</span>  <span class="va">9.9.9.9</span>
+    <span class="d">search</span>         otthon.lan
+    <span class="d">proxy</span>          <span class="f">none</span>
+
+
+                                                     <span class="d">reachability</span>
+
+    <span class="b">link</span> <span class="ok">✓</span>   <span class="b">gateway</span> <span class="ok">✓</span>   <span class="b">dns</span> <span class="ok">✓</span>   <span class="b">http</span> <span class="ok">✓</span>
+             <span class="f">2 ms</span>        <span class="f">11 ms</span>      <span class="f">38 ms</span>
+
+    <span class="ok">online</span>         <span class="f">no captive portal · unrestricted</span>
+
+
+                                                   <span class="d">public address</span>
+
+    <span class="d">ipv4</span>           <span class="va">84.21.7.113</span>
+    <span class="d">network</span>        <span class="b">Magyar Telekom</span>     <span class="f">AS5483</span>
+    <span class="d">location</span>       Budapest, Hungary  <span class="f">47.498, 19.040 · ±20 km</span>
+    <span class="d">timezone</span>       Europe/Budapest    <span class="f">matches system clock</span>
+
+
+  <span class="li">↑</span> <span class="b">0.4.0</span> <span class="f">available</span>                    <span class="li">netinspect self-update</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="2c">
+<div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>netinspect routes — oszlopok az adatból mérve, a default kiemelve</div>
+<div class="pair">
+
+<div class="tw dark">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">routes — dark</span></div>
+<pre>  <span class="f">$</span> netinspect routes
+
+  <span class="d">ipv4</span> <span class="r">─────────────────────────────────────────────────────────</span>
+
+     <span class="d">destination         gateway            iface    flags</span>
+     <span class="b">default</span>             <span class="va">192.168.1.1</span>        en0      <span class="f">UGScg</span>
+     10.7.0.0/24         <span class="f">link#18</span>            utun3    <span class="f">USc</span>
+     127.0.0.0/8         <span class="f">link#1</span>             lo0      <span class="f">UCS</span>
+     192.168.1.0/24      <span class="f">link#12</span>            en0      <span class="f">UCS</span>
+     224.0.0.0/4         <span class="f">link#12</span>            en0      <span class="f">UmCS</span>
+
+  <span class="d">ipv6</span> <span class="r">─────────────────────────────────────────────────────────</span>
+
+     <span class="b">default</span>             <span class="va">fe80::1%en0</span>        en0      <span class="f">UGcg</span>
+     ::1                 <span class="f">lo0</span>                lo0      <span class="f">UHL</span>
+     fe80::/64           <span class="f">link#12</span>            en0      <span class="f">UCI</span>
+
+  <span class="r">──────────────────────────────────────────────────────────────</span>
+  <span class="b">9 routes</span>   <span class="wa">2 default gateways</span>   <span class="wa">split tunnel active</span></pre>
+</div>
+
+<div class="tw light">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">routes — light</span></div>
+<pre>  <span class="f">$</span> netinspect routes
+
+  <span class="d">ipv4</span> <span class="r">─────────────────────────────────────────────────────────</span>
+
+     <span class="d">destination         gateway            iface    flags</span>
+     <span class="b">default</span>             <span class="va">192.168.1.1</span>        en0      <span class="f">UGScg</span>
+     10.7.0.0/24         <span class="f">link#18</span>            utun3    <span class="f">USc</span>
+     127.0.0.0/8         <span class="f">link#1</span>             lo0      <span class="f">UCS</span>
+     192.168.1.0/24      <span class="f">link#12</span>            en0      <span class="f">UCS</span>
+     224.0.0.0/4         <span class="f">link#12</span>            en0      <span class="f">UmCS</span>
+
+  <span class="d">ipv6</span> <span class="r">─────────────────────────────────────────────────────────</span>
+
+     <span class="b">default</span>             <span class="va">fe80::1%en0</span>        en0      <span class="f">UGcg</span>
+     ::1                 <span class="f">lo0</span>                lo0      <span class="f">UHL</span>
+     fe80::/64           <span class="f">link#12</span>            en0      <span class="f">UCI</span>
+
+  <span class="r">──────────────────────────────────────────────────────────────</span>
+  <span class="b">9 routes</span>   <span class="wa">2 default gateways</span>   <span class="wa">split tunnel active</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="2d">
+<div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>netinspect listen — kitettség szerinti csoportok, a port a kettőspont után világít</div>
+<div class="pair">
+
+<div class="tw dark">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">listen — dark</span></div>
+<pre>  <span class="f">$</span> netinspect listen
+
+  <span class="d">listening</span> <span class="r">────────────────────────────────────────────────</span>
+
+  <span class="wa">▌</span>  <span class="b">reachable from the network</span>                    <span class="f">4 sockets</span>
+  <span class="r">│</span>  <span class="d">proto  address              process            pid</span>
+  <span class="r">│</span>  tcp    <span class="wa">0.0.0.0</span><span class="f">:</span><span class="va">5432</span>         postgres          <span class="f">1284</span>
+  <span class="r">│</span>  tcp    <span class="wa">[::]</span><span class="f">:</span><span class="va">7000</span>            ControlCenter      <span class="f">612</span>
+  <span class="r">│</span>  tcp    <span class="wa">0.0.0.0</span><span class="f">:</span><span class="va">22</span>           sshd                 <span class="f">1</span> <span class="f">·root</span>
+  <span class="r">│</span>  udp    <span class="wa">0.0.0.0</span><span class="f">:</span><span class="va">5353</span>         mDNSResponder      <span class="f">271</span> <span class="f">·root</span>
+
+  <span class="ok">▌</span>  <span class="b">loopback only</span>                                 <span class="f">3 sockets</span>
+  <span class="r">│</span>  tcp    <span class="f">127.0.0.1</span><span class="f">:</span><span class="va">6379</span>       redis-server      <span class="f">4021</span>
+  <span class="r">│</span>  tcp    <span class="f">127.0.0.1</span><span class="f">:</span><span class="va">3000</span>       node              <span class="f">8830</span>
+  <span class="r">│</span>  tcp    <span class="f">[::1]</span><span class="f">:</span><span class="va">631</span>            <span class="f">—</span>                    <span class="f">—</span>
+
+  <span class="li">▌</span>  <span class="b">bound to one interface</span>                         <span class="f">1 socket</span>
+  <span class="r">│</span>  tcp    <span class="li">192.168.1.24</span><span class="f">:</span><span class="va">8384</span>    syncthing         <span class="f">2077</span>
+
+  <span class="r">──────────────────────────────────────────────────────────────</span>
+  <span class="f">3 sockets owned by other users · run with sudo to see names</span>
+  <span class="wa">application firewall: off</span>
+  <span class="f">the 4 exposed ports accept connections</span></pre>
+</div>
+
+<div class="tw light">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">listen — light</span></div>
+<pre>  <span class="f">$</span> netinspect listen
+
+  <span class="d">listening</span> <span class="r">────────────────────────────────────────────────</span>
+
+  <span class="wa">▌</span>  <span class="b">reachable from the network</span>                    <span class="f">4 sockets</span>
+  <span class="r">│</span>  <span class="d">proto  address              process            pid</span>
+  <span class="r">│</span>  tcp    <span class="wa">0.0.0.0</span><span class="f">:</span><span class="va">5432</span>         postgres          <span class="f">1284</span>
+  <span class="r">│</span>  tcp    <span class="wa">[::]</span><span class="f">:</span><span class="va">7000</span>            ControlCenter      <span class="f">612</span>
+  <span class="r">│</span>  tcp    <span class="wa">0.0.0.0</span><span class="f">:</span><span class="va">22</span>           sshd                 <span class="f">1</span> <span class="f">·root</span>
+  <span class="r">│</span>  udp    <span class="wa">0.0.0.0</span><span class="f">:</span><span class="va">5353</span>         mDNSResponder      <span class="f">271</span> <span class="f">·root</span>
+
+  <span class="ok">▌</span>  <span class="b">loopback only</span>                                 <span class="f">3 sockets</span>
+  <span class="r">│</span>  tcp    <span class="f">127.0.0.1</span><span class="f">:</span><span class="va">6379</span>       redis-server      <span class="f">4021</span>
+  <span class="r">│</span>  tcp    <span class="f">127.0.0.1</span><span class="f">:</span><span class="va">3000</span>       node              <span class="f">8830</span>
+  <span class="r">│</span>  tcp    <span class="f">[::1]</span><span class="f">:</span><span class="va">631</span>            <span class="f">—</span>                    <span class="f">—</span>
+
+  <span class="li">▌</span>  <span class="b">bound to one interface</span>                         <span class="f">1 socket</span>
+  <span class="r">│</span>  tcp    <span class="li">192.168.1.24</span><span class="f">:</span><span class="va">8384</span>    syncthing         <span class="f">2077</span>
+
+  <span class="r">──────────────────────────────────────────────────────────────</span>
+  <span class="f">3 sockets owned by other users · run with sudo to see names</span>
+  <span class="wa">application firewall: off</span>
+  <span class="f">the 4 exposed ports accept connections</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="2e">
+<div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>A négy offline mód — a meg nem kísérelt lépcsőfokok halványak, nem hibásak</div>
+<div class="pair">
+
+<div class="tw dark">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">states — dark</span></div>
+<pre>  <span class="d">captive portal</span> <span class="r">───────────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">gateway</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">dns</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">http</span> <span class="wa">⚠</span>
+                  <span class="f">3 ms</span>          <span class="f">14 ms</span>     <span class="f">302</span>
+
+     <span class="wa">captive portal</span>  <span class="f">sign in to continue</span>
+     <span class="li">http://wifi.mav-start.hu/login</span>
+
+  <span class="d">dns failure</span> <span class="r">──────────────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">gateway</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">dns</span> <span class="er">✗</span> <span class="r">───</span> <span class="r">http ·</span>
+                  <span class="f">2 ms</span>          <span class="f">timeout</span>
+
+     <span class="er">dns failure</span>     <span class="f">1.1.1.1 did not answer in 2000 ms</span>
+
+  <span class="d">gateway unreachable</span> <span class="r">──────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">gateway</span> <span class="er">✗</span> <span class="r">─── dns · ─── http ·</span>
+                  <span class="f">no reply</span>
+
+     <span class="er">gateway unreachable</span>  <span class="f">192.168.1.1 · exit 11</span>
+
+  <span class="d">link down</span> <span class="r">────────────────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="er">✗</span> <span class="r">─── gateway · ─── dns · ─── http ·</span>
+
+     <span class="er">link down</span>       <span class="f">no interface has a carrier and an address</span>
+
+  <span class="d">vpn leak</span> <span class="r">─────────────────────────────────────────────────────</span>
+
+     <span class="d">ipv4</span>         <span class="va">84.21.7.113</span>   <span class="wa">⚠ not routed through VPN</span>
+     <span class="d">network</span>      <span class="b">Magyar Telekom</span>      <span class="f">AS5483 · utun3 is up</span></pre>
+</div>
+
+<div class="tw light">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">states — light</span></div>
+<pre>  <span class="d">captive portal</span> <span class="r">───────────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">gateway</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">dns</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">http</span> <span class="wa">⚠</span>
+                  <span class="f">3 ms</span>          <span class="f">14 ms</span>     <span class="f">302</span>
+
+     <span class="wa">captive portal</span>  <span class="f">sign in to continue</span>
+     <span class="li">http://wifi.mav-start.hu/login</span>
+
+  <span class="d">dns failure</span> <span class="r">──────────────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">gateway</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">dns</span> <span class="er">✗</span> <span class="r">───</span> <span class="r">http ·</span>
+                  <span class="f">2 ms</span>          <span class="f">timeout</span>
+
+     <span class="er">dns failure</span>     <span class="f">1.1.1.1 did not answer in 2000 ms</span>
+
+  <span class="d">gateway unreachable</span> <span class="r">──────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="ok">✓</span> <span class="r">───</span> <span class="b">gateway</span> <span class="er">✗</span> <span class="r">─── dns · ─── http ·</span>
+                  <span class="f">no reply</span>
+
+     <span class="er">gateway unreachable</span>  <span class="f">192.168.1.1 · exit 11</span>
+
+  <span class="d">link down</span> <span class="r">────────────────────────────────────────────────────</span>
+
+     <span class="b">link</span> <span class="er">✗</span> <span class="r">─── gateway · ─── dns · ─── http ·</span>
+
+     <span class="er">link down</span>       <span class="f">no interface has a carrier and an address</span>
+
+  <span class="d">vpn leak</span> <span class="r">─────────────────────────────────────────────────────</span>
+
+     <span class="d">ipv4</span>         <span class="va">84.21.7.113</span>   <span class="wa">⚠ not routed through VPN</span>
+     <span class="d">network</span>      <span class="b">Magyar Telekom</span>      <span class="f">AS5483 · utun3 is up</span></pre>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="2f">
+<div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a>Degradált módok — 66 oszlop alatt, --ascii, --no-color, --json, SSID hiánya</div>
+<div class="pair">
+
+<div class="tw dark">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">fallbacks — dark</span></div>
+<pre>  <span class="f">$</span> netinspect <span class="f">--ascii --no-color</span>   <span class="f">(48 cols)</span>
+
+  netinspect                 0.3.1 | 14:22:07
+  ------------------------------------------
+  *  Wi-Fi | en0                   connected
+     network
+       &lt;SSID unavailable&gt;
+     ipv4
+       192.168.1.24/24
+       dhcp | renews in 4h 12m
+     gateway
+       192.168.1.1
+  -  Ethernet | en5                 no cable
+
+  -- reachability --------------------------
+     link ok - gateway ok - dns ok - http ok
+     online | no captive portal
+
+  <span class="f">$</span> netinspect <span class="f">--json | jq .reachability</span>
+
+  <span class="f">{</span>
+    <span class="li">"link"</span><span class="f">:</span> <span class="f">{</span> <span class="li">"ok"</span><span class="f">:</span> <span class="ok">true</span><span class="f">,</span> <span class="li">"ms"</span><span class="f">:</span> <span class="ok">null</span> <span class="f">},</span>
+    <span class="li">"gateway"</span><span class="f">:</span> <span class="f">{</span> <span class="li">"ok"</span><span class="f">:</span> <span class="ok">true</span><span class="f">,</span> <span class="li">"ms"</span><span class="f">:</span> <span class="va">2</span> <span class="f">},</span>
+    <span class="li">"dns"</span><span class="f">:</span> <span class="f">{</span> <span class="li">"ok"</span><span class="f">:</span> <span class="ok">true</span><span class="f">,</span> <span class="li">"ms"</span><span class="f">:</span> <span class="va">11</span> <span class="f">},</span>
+    <span class="li">"http"</span><span class="f">:</span> <span class="f">{</span> <span class="li">"ok"</span><span class="f">:</span> <span class="ok">true</span><span class="f">,</span> <span class="li">"ms"</span><span class="f">:</span> <span class="va">38</span><span class="f">,</span> <span class="li">"status"</span><span class="f">:</span> <span class="va">204</span> <span class="f">},</span>
+    <span class="li">"state"</span><span class="f">:</span> <span class="va">"online"</span><span class="f">,</span>
+    <span class="li">"captive_portal"</span><span class="f">:</span> <span class="ok">null</span>
+  <span class="f">}</span>
+
+  <span class="f">$</span> netinspect check <span class="f">&amp;&amp; echo up</span>
+  up</pre>
+</div>
+
+<div class="tw light">
+<div class="tw-bar" style="background:var(--barbg)"><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-dot" style="background:var(--dot)"></span><span class="tw-name d">fallbacks — light</span></div>
+<pre>  <span class="f">$</span> netinspect <span class="f">--ascii --no-color</span>   <span class="f">(48 cols)</span>
+
+  netinspect                 0.3.1 | 14:22:07
+  ------------------------------------------
+  *  Wi-Fi | en0                   connected
+     network
+       &lt;SSID unavailable&gt;
+     ipv4
+       192.168.1.24/24
+       dhcp | renews in 4h 12m
+     gateway
+       192.168.1.1
+  -  Ethernet | en5                 no cable
+
+  -- reachability --------------------------
+     link ok - gateway ok - dns ok - http ok
+     online | no captive portal
+
+  <span class="f">$</span> netinspect <span class="f">--json | jq .reachability</span>
+
+  <span class="f">{</span>
+    <span class="li">"link"</span><span class="f">:</span> <span class="f">{</span> <span class="li">"ok"</span><span class="f">:</span> <span class="ok">true</span><span class="f">,</span> <span class="li">"ms"</span><span class="f">:</span> <span class="ok">null</span> <span class="f">},</span>
+    <span class="li">"gateway"</span><span class="f">:</span> <span class="f">{</span> <span class="li">"ok"</span><span class="f">:</span> <span class="ok">true</span><span class="f">,</span> <span class="li">"ms"</span><span class="f">:</span> <span class="va">2</span> <span class="f">},</span>
+    <span class="li">"dns"</span><span class="f">:</span> <span class="f">{</span> <span class="li">"ok"</span><span class="f">:</span> <span class="ok">true</span><span class="f">,</span> <span class="li">"ms"</span><span class="f">:</span> <span class="va">11</span> <span class="f">},</span>
+    <span class="li">"http"</span><span class="f">:</span> <span class="f">{</span> <span class="li">"ok"</span><span class="f">:</span> <span class="ok">true</span><span class="f">,</span> <span class="li">"ms"</span><span class="f">:</span> <span class="va">38</span><span class="f">,</span> <span class="li">"status"</span><span class="f">:</span> <span class="va">204</span> <span class="f">},</span>
+    <span class="li">"state"</span><span class="f">:</span> <span class="va">"online"</span><span class="f">,</span>
+    <span class="li">"captive_portal"</span><span class="f">:</span> <span class="ok">null</span>
+  <span class="f">}</span>
+
+  <span class="f">$</span> netinspect check <span class="f">&amp;&amp; echo up</span>
+  up</pre>
+</div>
+
+</div>
+</div>
+
+</div>
+<p class="dv-next">Első kör, a spec eredeti színtáblájával — a <a class="dv-oid" href="#t3">3</a> ezt váltja le egy megmagyarázható rendszerre.</p>
+</section>
+</x-dc>
+</body>
+</html>
