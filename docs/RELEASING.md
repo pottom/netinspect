@@ -74,6 +74,24 @@ A brew-installed copy is detected from its path — `…/Cellar/netinspect/…` 
 `netinspect update` tells the user to run `brew upgrade netinspect` rather than
 replacing a file a package manager believes it owns.
 
+## Repository settings
+
+These live in GitHub rather than in a file, so they are written down here — a
+setting nobody can find is a setting nobody can restore.
+
+`main` is protected: pull requests only, **including for administrators**, with
+all four CI checks required (`test`, `installer`, and both `build` jobs), linear
+history, and no force pushes or deletions. Zero approving reviews are required,
+so a solo maintainer can merge their own PR — the point is that everything goes
+through CI, not that someone else signs it off.
+
+```
+gh api -X GET repos/pottom/netinspect/branches/main/protection
+```
+
+Tags are not covered by branch protection, which is why pushing one still
+starts a release.
+
 ## Checking a release by hand
 
 ```
