@@ -93,6 +93,9 @@ cargo run -- --json | jq .
 
 - `docs/AGENTS.md` — the design contract and the imported visual reference.
   Owns `docs/**`.
+- `src/container/AGENTS.md` — naming the container behind a published port:
+  the two sources, why they are alternatives, and the limits on asking a
+  third-party daemon anything. Owns `src/container/**`.
 - `src/sys/AGENTS.md` — the platform layer: the `Platform` trait contract, and
   the only subtree permitted `cfg`/`unsafe`. Owns `src/sys/**`.
   - `src/sys/macos/AGENTS.md` — the macOS backend, the subprocess exception,

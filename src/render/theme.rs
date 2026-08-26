@@ -209,13 +209,42 @@ pub struct Glyphs {
     pub pending: &'static str,
     pub rule: &'static str,
     pub connector: &'static str,
-    pub bar_full: &'static str,
-    pub bar_empty: &'static str,
+    /// The signal meter for each level 0..=5, as `(lit, unlit)`.
+    ///
+    /// Split in two because a braille cell is a single character and carries a
+    /// single colour: the boundary between what was measured and what was not
+    /// can only fall between cells. So the *shape* carries the reading — a
+    /// staircase that flattens to a dotted baseline as the signal drops — and
+    /// the colour merely follows it. The baseline is always drawn, or a weak
+    /// signal would leave nothing to compare against.
+    pub meter: [(&'static str, &'static str); 6],
     pub sep: &'static str,
     pub arrow_up: &'static str,
     pub partial: &'static str,
     /// Placeholder for a value that could not be determined.
     pub unknown: &'static str,
+    /// The owner column's leading mark in `listen`. The *shape* says what kind
+    /// of owner it is; the row's colours already say how far away the port can
+    /// be reached from, so these carry no hue of their own.
+    ///
+    /// Every row gets one. A single marked row among unmarked ones reads as an
+    /// exception rather than as a column, and the names stop lining up.
+    pub container: &'static str,
+    /// A process running as root.
+    pub privileged: &'static str,
+    /// A process running as anybody else.
+    pub process: &'static str,
+    /// Interface kinds, for the section headers.
+    pub wifi: &'static str,
+    pub ethernet: &'static str,
+    pub tunnel: &'static str,
+    pub loopback: &'static str,
+    /// Section marks: name resolution, the reachability ladder, the public
+    /// address, and the firewall.
+    pub dns: &'static str,
+    pub link: &'static str,
+    pub globe: &'static str,
+    pub shield: &'static str,
     /// Typographic minus, for RSSI in the human report only.
     pub minus: &'static str,
     pub plus_minus: &'static str,
@@ -230,14 +259,123 @@ pub const UNICODE: Glyphs = Glyphs {
     pending: "·",
     rule: "─",
     connector: "──",
-    bar_full: "▇",
-    bar_empty: "▁",
+    meter: [
+        ("", "⣀⣀⡀"),
+        ("⣀", "⣀⡀"),
+        ("⣠", "⣀⡀"),
+        ("⣠⣆", "⡀"),
+        ("⣠⣾", "⡀"),
+        ("⣠⣾⡇", ""),
+    ],
     sep: "·",
     arrow_up: "↑",
     partial: "◐",
     unknown: "—",
+    container: "▣",
+    privileged: "◆",
+    process: "◇",
+    wifi: "",
+    ethernet: "",
+    tunnel: "",
+    loopback: "",
+    dns: "",
+    link: "",
+    globe: "",
+    shield: "",
     minus: "−",
     plus_minus: "±",
+};
+
+/// The codepoint ranges the Nerd set may draw from.
+///
+/// Not a guess about Nerd Fonts' release notes: measured by reading the `cmap`
+/// of a v2 font (Hack, "Nerd Font Complete") and a v3 font (JetBrainsMono NL)
+/// and counting which codepoints both carry.
+///
+/// | range | in both | v3 only |
+/// |---|---|---|
+/// | Devicons `E700`–`E7C5` | 198/198 | 0 |
+/// | Font Awesome `F000`–`F2E0` | 679/737 | 0 |
+/// | Font Logos `F300`–`F32F` | 48/48 | 0 |
+/// | Seti `E5FA`–`E6B1` | 59/184 | **121** |
+/// | Octicons `F400`–`F532` | 221/307 | **86** |
+///
+/// The last two are why this list exists. A glyph from either would look right
+/// on a current font and be a blank box on one a few years old.
+pub const NERD_RANGES: [(char, char); 3] = [
+    ('\u{e700}', '\u{e7c5}'),
+    ('\u{f000}', '\u{f2e0}'),
+    ('\u{f300}', '\u{f32f}'),
+];
+
+/// Which glyph set to render with.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Icons {
+    /// Unicode where the locale says the terminal can take it, ASCII where it
+    /// cannot. Never Nerd — see [`NERD`] for why that cannot be detected.
+    Auto,
+    Nerd,
+    Unicode,
+    Ascii,
+}
+
+impl Icons {
+    pub fn parse(value: &str) -> Option<Self> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "auto" => Some(Icons::Auto),
+            "nerd" | "nerdfont" | "nerd-font" => Some(Icons::Nerd),
+            "unicode" | "utf8" | "utf-8" => Some(Icons::Unicode),
+            "ascii" | "plain" => Some(Icons::Ascii),
+            _ => None,
+        }
+    }
+
+    /// `utf8` is what the locale claims, and only `Auto` consults it: an
+    /// explicit choice is the user telling us something we cannot measure, and
+    /// second-guessing it would make the flag useless.
+    pub fn glyphs(self, utf8: bool) -> Glyphs {
+        match self {
+            Icons::Nerd => NERD,
+            Icons::Unicode => UNICODE,
+            Icons::Ascii => ASCII,
+            Icons::Auto if utf8 => UNICODE,
+            Icons::Auto => ASCII,
+        }
+    }
+}
+
+/// The Nerd Font set.
+///
+/// Never chosen automatically. A terminal does not tell an application what
+/// font it is using — there is no escape sequence for it, and the usual trick
+/// of printing a glyph and asking for the cursor position measures *width*,
+/// which a missing glyph still has. Guessing wrong fills the report with empty
+/// boxes, so this set is opt-in and nothing else.
+///
+/// Every codepoint here comes from a range measured to be identical in Nerd
+/// Fonts v2 and v3 — see `NERD_RANGES`. Ranges outside that list gained or
+/// moved glyphs in v3 and would render as an empty box on an older font, which
+/// is exactly the failure this set exists to avoid.
+///
+/// Where Unicode already does the job better — the braille meter, the rails,
+/// the rules — this set inherits it rather than reaching for an icon.
+pub const NERD: Glyphs = Glyphs {
+    check: "\u{f00c}",      // nf-fa-check
+    cross: "\u{f00d}",      // nf-fa-close
+    partial: "\u{f042}",    // nf-fa-adjust, a half-filled circle
+    arrow_up: "\u{f062}",   // nf-fa-arrow_up
+    container: "\u{f308}",  // nf-linux-docker, the whale
+    privileged: "\u{f013}", // nf-fa-cog
+    process: "\u{f007}",    // nf-fa-user
+    wifi: "\u{f1eb}",       // nf-fa-wifi
+    ethernet: "\u{f1e6}",   // nf-fa-plug
+    tunnel: "\u{f023}",     // nf-fa-lock
+    loopback: "\u{f109}",   // nf-fa-laptop
+    dns: "\u{f233}",        // nf-fa-server
+    link: "\u{f0c1}",       // nf-fa-link
+    globe: "\u{f0ac}",      // nf-fa-globe
+    shield: "\u{f132}",     // nf-fa-shield
+    ..UNICODE
 };
 
 pub const ASCII: Glyphs = Glyphs {
@@ -249,12 +387,29 @@ pub const ASCII: Glyphs = Glyphs {
     pending: ".",
     rule: "-",
     connector: "-",
-    bar_full: "#",
-    bar_empty: ".",
+    meter: [
+        ("", ".:-=#"),
+        (".", ":-=#"),
+        (".:", "-=#"),
+        (".:-", "=#"),
+        (".:-=", "#"),
+        (".:-=#", ""),
+    ],
     sep: "|",
     arrow_up: "^",
     partial: "!",
     unknown: "?",
+    container: "[]",
+    privileged: "##",
+    process: "<>",
+    wifi: "",
+    ethernet: "",
+    tunnel: "",
+    loopback: "",
+    dns: "",
+    link: "",
+    globe: "",
+    shield: "",
     minus: "-",
     plus_minus: "+/-",
 };
@@ -533,27 +688,165 @@ mod tests {
     }
 
     #[test]
+    fn the_meter_keeps_its_width_at_every_level() {
+        // The reading is in the shape, so the meter must not change size as it
+        // changes — a column that moves with the signal is a column nobody can
+        // read a table by.
+        for glyphs in [UNICODE, ASCII] {
+            let widths: Vec<usize> = glyphs
+                .meter
+                .iter()
+                .map(|(lit, unlit)| lit.chars().count() + unlit.chars().count())
+                .collect();
+            assert!(
+                widths.windows(2).all(|pair| pair[0] == pair[1]),
+                "meter widths differ between levels: {widths:?}"
+            );
+        }
+        assert!(ASCII
+            .meter
+            .iter()
+            .all(|(lit, unlit)| lit.is_ascii() && unlit.is_ascii()));
+    }
+
+    #[test]
+    fn the_meter_fills_as_the_signal_rises() {
+        // Monotonic: a stronger signal never lights fewer cells.
+        for glyphs in [UNICODE, ASCII] {
+            let lit: Vec<usize> = glyphs
+                .meter
+                .iter()
+                .map(|(l, _)| l.chars().count())
+                .collect();
+            assert!(lit.windows(2).all(|pair| pair[0] <= pair[1]), "{lit:?}");
+            assert_eq!(lit[0], 0, "no signal lights nothing");
+            assert_eq!(*lit.last().unwrap(), glyphs.meter[0].1.chars().count());
+        }
+    }
+
+    /// Every glyph in a set, paired with its field name.
+    ///
+    /// One list drives every guard below. It is hand-written because Rust has
+    /// no reflection — and `the_glyph_list_covers_every_field` is what stops a
+    /// new field from quietly escaping it.
+    fn core(g: &Glyphs) -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("rail_head", g.rail_head),
+            ("rail_body", g.rail_body),
+            ("rail_end", g.rail_end),
+            ("check", g.check),
+            ("cross", g.cross),
+            ("pending", g.pending),
+            ("rule", g.rule),
+            ("connector", g.connector),
+            ("sep", g.sep),
+            ("arrow_up", g.arrow_up),
+            ("partial", g.partial),
+            ("unknown", g.unknown),
+            ("container", g.container),
+            ("privileged", g.privileged),
+            ("process", g.process),
+            ("minus", g.minus),
+            ("plus_minus", g.plus_minus),
+        ]
+    }
+
+    /// Marks that exist only in the Nerd set. There is no Unicode character
+    /// that means "Wi-Fi" without also meaning something else, so rather than
+    /// approximate one, the other sets simply have no mark here.
+    fn icons(g: &Glyphs) -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("wifi", g.wifi),
+            ("ethernet", g.ethernet),
+            ("tunnel", g.tunnel),
+            ("loopback", g.loopback),
+            ("dns", g.dns),
+            ("link", g.link),
+            ("globe", g.globe),
+            ("shield", g.shield),
+        ]
+    }
+
+    /// A field added to `Glyphs` and forgotten in the lists above would be
+    /// skipped by every guard here without a word. The struct's size is the
+    /// one thing that changes when that happens.
+    #[test]
+    fn the_glyph_list_covers_every_field() {
+        let strings = core(&UNICODE).len() + icons(&UNICODE).len();
+        let meter = size_of::<[(&'static str, &'static str); 6]>();
+        assert_eq!(
+            size_of::<Glyphs>(),
+            strings * size_of::<&'static str>() + meter,
+            "a glyph field is missing from core() or icons()"
+        );
+    }
+
+    #[test]
     fn every_ascii_glyph_is_ascii_and_present() {
-        for glyph in [
-            ASCII.rail_head,
-            ASCII.rail_body,
-            ASCII.rail_end,
-            ASCII.check,
-            ASCII.cross,
-            ASCII.pending,
-            ASCII.rule,
-            ASCII.connector,
-            ASCII.bar_full,
-            ASCII.bar_empty,
-            ASCII.sep,
-            ASCII.arrow_up,
-            ASCII.partial,
-            ASCII.unknown,
-            ASCII.minus,
-            ASCII.plus_minus,
-        ] {
-            assert!(!glyph.is_empty());
-            assert!(glyph.is_ascii(), "{glyph:?} is not ASCII");
+        for (name, glyph) in core(&ASCII) {
+            assert!(!glyph.is_empty(), "{name} is empty");
+            assert!(glyph.is_ascii(), "{name} is {glyph:?}, which is not ASCII");
+        }
+    }
+
+    /// The fallback chain is the whole point: whatever a set cannot render has
+    /// to have somewhere to fall back to.
+    #[test]
+    fn every_glyph_has_a_counterpart_in_the_set_below_it() {
+        for (name, _) in core(&UNICODE) {
+            let unicode = core(&UNICODE)
+                .into_iter()
+                .find(|(n, _)| *n == name)
+                .unwrap()
+                .1;
+            let ascii = core(&ASCII)
+                .into_iter()
+                .find(|(n, _)| *n == name)
+                .unwrap()
+                .1;
+            let nerd = core(&NERD).into_iter().find(|(n, _)| *n == name).unwrap().1;
+            assert!(!unicode.is_empty(), "{name} has no Unicode form");
+            assert!(!ascii.is_empty(), "{name} has no ASCII form");
+            assert!(!nerd.is_empty(), "{name} has no Nerd form");
+        }
+    }
+
+    /// An icon-only mark must stay empty everywhere else, or asking for one
+    /// glyph set would reshape the report for everybody who did not.
+    #[test]
+    fn an_icon_only_mark_is_empty_outside_the_nerd_set() {
+        for (name, glyph) in icons(&UNICODE).into_iter().chain(icons(&ASCII)) {
+            assert!(glyph.is_empty(), "{name} is {glyph:?} outside the Nerd set");
+        }
+        for (name, glyph) in icons(&NERD) {
+            assert!(!glyph.is_empty(), "{name} has no Nerd glyph");
+        }
+    }
+
+    /// A glyph from a range that moved between Nerd Fonts v2 and v3 looks
+    /// right on a current font and is an empty box on one a few years old. The
+    /// ranges in `NERD_RANGES` were measured rather than assumed.
+    #[test]
+    fn every_nerd_glyph_comes_from_a_range_that_never_moved() {
+        let nerd: Vec<(&str, &str)> = core(&NERD).into_iter().chain(icons(&NERD)).collect();
+        for (name, glyph) in nerd {
+            // Inherited from Unicode where Unicode already does it better.
+            if core(&UNICODE)
+                .iter()
+                .any(|(n, g)| *n == name && *g == glyph)
+            {
+                continue;
+            }
+            let mut chars = glyph.chars();
+            let point = chars.next().unwrap();
+            assert!(chars.next().is_none(), "{name} is more than one character");
+            assert!(
+                NERD_RANGES
+                    .iter()
+                    .any(|(lo, hi)| (*lo..=*hi).contains(&point)),
+                "{name} is U+{:04X}, outside every range measured stable",
+                point as u32
+            );
         }
     }
 }

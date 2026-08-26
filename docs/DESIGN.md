@@ -253,8 +253,21 @@ The dangerous group must never be below the fold.
 
 ### default report
 
-- Signal bars are `▇` in `bright` and `▁` in `rule` — a measurement, not a
-  status. Never green.
+- The signal meter is a braille staircase that flattens to a dotted baseline as
+  the signal drops, and it is **coloured by strength**: `ok` at four and five
+  cells, `public` at three, `fail` at one and two. The unlit part stays `rule`.
+
+> **Implementation note — the meter is the one exception to §1.** This document
+> said for a long time that signal bars are `bright` and `rule` and never
+> green, because strength is a measurement rather than a probe outcome. That
+> was overruled deliberately: a signal meter that is not coloured does not look
+> like a signal meter.
+>
+> The cost is real and worth naming rather than forgetting. Green now appears
+> in two meanings — "a probe answered" and "the radio is strong" — and a reader
+> who generalises to "green is good" will misread amber on a public address as
+> a warning, which §2.2 exists to prevent. Nothing else may take a second
+> meaning on the strength of this precedent.
 - The port in an `address:port` pair is `bright`; the colon is `faint`; the
   host is coloured by reach. Splitting at the colon is what makes ports
   scannable.
@@ -325,8 +338,63 @@ survive its removal, and the way it survives is **structure**, not adjectives:
 Below 66 columns: stacked layout, label on its own line, value indented 4, no
 right-alignment, no rules. Below 40: the same, and drop the rail.
 
-`--ascii` glyph table is spec §7.7 and unchanged, plus: `▌` → `|`, `╵` → `.`,
-`◐` → `!`.
+### Glyph sets
+
+Three, chosen with `--icons` or `NETINSPECT_ICONS`, defaulting to `auto`:
+
+| set | when | what it adds |
+|---|---|---|
+| `unicode` | `auto` on a UTF-8 locale | the rails, the braille meter, the owner marks |
+| `ascii` | `auto` on anything else, or `--ascii` | `▌` → `|`, `╵` → `.`, `◐` → `!`, and spec §7.7 |
+| `nerd` | **only when asked for** | interface and section marks |
+
+Two rules hold the sets together, and both are enforced by tests rather than by
+review:
+
+- **Every mark falls back.** A glyph present in one set is present in the set
+  below it. `every_glyph_has_a_counterpart_in_the_set_below_it`.
+- **An icon-only mark is empty everywhere else.** `wifi`, `ethernet`,
+  `tunnel`, `loopback`, `dns`, `link`, `globe` and `shield` exist only in the
+  Nerd set, and an empty mark occupies no columns — so asking for icons cannot
+  reshape the report for anyone who did not.
+
+> **Implementation note — a Nerd Font cannot be detected.** A terminal does not
+> report its font. There is no escape sequence for it, and the usual suggestion
+> — print a glyph, ask for the cursor position with `ESC[6n` — measures *width*,
+> which a missing glyph still has, since it renders as an empty box one cell
+> wide. So `auto` never chooses `nerd`: a wrong guess fills the whole report
+> with tofu, which is far worse than a plain `▣`.
+>
+> The Nerd set draws only from ranges **measured** to be identical in Nerd
+> Fonts v2 and v3, by reading the `cmap` of a v2 font (Hack) and a v3 font
+> (JetBrainsMono NL) and counting which codepoints both carry:
+>
+> | range | in both | v3 only |
+> |---|---|---|
+> | Devicons `E700`–`E7C5` | 198/198 | 0 |
+> | Font Awesome `F000`–`F2E0` | 679/737 | 0 |
+> | Font Logos `F300`–`F32F` | 48/48 | 0 |
+> | Seti `E5FA`–`E6B1` | 59/184 | **121** |
+> | Octicons `F400`–`F532` | 221/307 | **86** |
+>
+> The last two are why the list exists: a glyph from either looks right on a
+> current font and is a blank box on one a few years old. The container mark is
+> `U+F308`, the Docker whale from Font Logos — a range that turned out to be
+> completely stable. `every_nerd_glyph_comes_from_a_range_that_never_moved`
+> keeps this honest.
+
+### The owner column in `listen`
+
+Every row carries a mark, not only the container rows: one marked row among
+unmarked ones reads as an exception rather than as a column, and the names stop
+lining up. `▣` a container, `◆` a process running as root, `◇` any other
+process, and nothing at all where the owner is unknown — the name is already an
+em dash there, and a second symbol for the same absence says nothing the first
+did not. The space is still reserved, so the names stay in one column.
+
+The marks carry no hue. The shape says what kind of owner it is; the row
+already says in colour how far away the port can be reached from, and a second
+signal in the same column only competes with the first.
 
 ---
 

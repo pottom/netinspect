@@ -15,6 +15,8 @@ use super::theme::{Role, Theme};
 const ROW_COL: usize = 6;
 const PROTO_WIDTH: usize = 7;
 const GAP: usize = 2;
+/// How much of a wide terminal's surplus any one column may absorb.
+const SPREAD: usize = 8;
 
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -36,51 +38,149 @@ const GROUPS: [(Exposure, Reach); 3] = [
 
 struct Widths {
     address: usize,
-    process: usize,
+    owner: usize,
+    detail: usize,
     pid: usize,
 }
 
-fn widths(sockets: &[SocketEntry], theme: &Theme, resolve: bool) -> Widths {
-    let address = sockets
-        .iter()
-        .map(|socket| {
+/// Column widths, measured from the data and then given room to breathe.
+///
+/// Measuring alone leaves this table packed into the left half of a wide
+/// terminal while `routes` — whose IPv6 destinations are long enough to push
+/// its own columns apart — fills it. The difference is in the data, not in the
+/// design, so the surplus is spread across the columns rather than left as one
+/// dead margin on the right. Capped, because a column pushed halfway across a
+/// very wide terminal stops being a column and becomes two lists.
+fn widths(sockets: &[SocketEntry], theme: &Theme, options: &Options) -> Widths {
+    let longest = |f: &dyn Fn(&SocketEntry) -> usize, header: &str| {
+        sockets.iter().map(f).max().unwrap_or(0).max(header.len())
+    };
+
+    let mut address = longest(
+        &|socket| {
             let mut width = address_text(socket).chars().count();
             // The service name sits in the address column, so it has to be
-            // measured with it or it runs into the process name.
-            if resolve {
+            // measured with it or it runs into the owner.
+            if options.resolve {
                 if let Some(name) = service_name(socket.port, socket.protocol) {
                     width += 1 + name.chars().count();
                 }
             }
             width
-        })
-        .max()
-        .unwrap_or(0)
-        .max("address".len())
-        + GAP;
-    let process = sockets
-        .iter()
-        .map(|socket| match &socket.process {
-            Some(process) => process.name.chars().count(),
-            None => theme.glyphs.unknown.chars().count(),
-        })
-        .max()
-        .unwrap_or(0)
-        .max("process".len())
-        + GAP;
-    let pid = sockets
-        .iter()
-        .map(|socket| match &socket.process {
+        },
+        "address",
+    ) + GAP;
+    let mut owner = longest(&|socket| owner_text(socket, theme).chars().count(), "owner") + GAP;
+
+    // A column nothing fills is a column that should not be there.
+    let detail_content = longest(&|socket| detail_text(socket, options).chars().count(), "");
+    let mut detail = if detail_content == 0 {
+        0
+    } else {
+        detail_content + GAP
+    };
+
+    let pid = longest(
+        &|socket| match &socket.process {
             Some(process) => process.pid.to_string().chars().count(),
             None => theme.glyphs.unknown.chars().count(),
-        })
-        .max()
-        .unwrap_or(0)
-        .max("pid".len());
+        },
+        "pid",
+    );
+
+    // What is left once the row's fixed parts are accounted for.
+    let fixed = ROW_COL - 1 + PROTO_WIDTH + pid;
+    let available = options.edge.saturating_sub(fixed);
+    let natural = address + owner + detail;
+    if natural < available {
+        // Evenly, so no single column swallows the terminal.
+        let each = (available - natural) / 3;
+        address += each.min(SPREAD);
+        owner += each.min(SPREAD);
+        if detail > 0 {
+            detail += each.min(SPREAD);
+        }
+    }
+
     Widths {
         address,
-        process,
+        owner,
+        detail,
         pid,
+    }
+}
+
+/// What kind of owner holds this socket.
+///
+/// Every row gets a mark, not only the container rows. One marked row among
+/// unmarked ones reads as an exception rather than as a column, and the names
+/// stop lining up — which is the whole reason the column exists.
+fn owner_mark(socket: &SocketEntry, theme: &Theme) -> &'static str {
+    match (&socket.container, &socket.process) {
+        (Some(_), _) => theme.glyphs.container,
+        // Root holding a port is the row worth finding in this table, so it
+        // gets a shape of its own rather than sharing one with every daemon.
+        (None, Some(process)) if process.uid == 0 => theme.glyphs.privileged,
+        (None, Some(_)) => theme.glyphs.process,
+        // No mark. The name is already an em dash, and a second symbol for the
+        // same absence says nothing the first did not. The space is still
+        // reserved, so the names stay in one column.
+        (None, None) => "",
+    }
+}
+
+/// The mark and the space after it. Every row spends this, marked or not.
+fn mark_width(theme: &Theme) -> usize {
+    theme.glyphs.container.chars().count() + 1
+}
+
+/// What goes in the owner column: the container's name when we have it, and
+/// the process holding the socket when we do not.
+///
+/// A container's name is the answer to the question the reader is asking. The
+/// forwarder process — `OrbStack Helper` and its like — is a helper nobody
+/// started on purpose, and naming it where the owner belongs is how this table
+/// ends up explaining nothing.
+fn owner_name(socket: &SocketEntry, theme: &Theme) -> String {
+    match (&socket.container, &socket.process) {
+        (Some(container), process) => match (&container.name, process) {
+            (Some(name), _) => name.clone(),
+            // The runtime could not be asked. Saying which helper holds the
+            // socket is then the most that is true.
+            (None, Some(process)) => process.name.clone(),
+            (None, None) => theme.glyphs.unknown.to_owned(),
+        },
+        (None, Some(process)) => process.name.clone(),
+        (None, None) => theme.glyphs.unknown.to_owned(),
+    }
+}
+
+/// The owner column as it will be measured: mark, a space, then the name.
+fn owner_text(socket: &SocketEntry, theme: &Theme) -> String {
+    format!(
+        "{}{}",
+        " ".repeat(mark_width(theme)),
+        owner_name(socket, theme)
+    )
+}
+
+/// The faint column after the owner: what the owner *is*.
+fn detail_text(socket: &SocketEntry, options: &Options) -> String {
+    if let Some(container) = &socket.container {
+        return match &container.image {
+            Some(image) => image.clone(),
+            // Unnamed: say which runtime recognised it, so the marker is not a
+            // claim without a source.
+            None => format!("{} container", container.runtime),
+        };
+    }
+    // Only when it is somebody else's.
+    match &socket.process {
+        Some(process) if options.current_uid.is_none_or(|uid| uid != process.uid) => process
+            .user
+            .clone()
+            .unwrap_or_else(|| process.uid.to_string()),
+        _ => String::new(),
     }
 }
 
@@ -99,7 +199,7 @@ pub fn render(table: &SocketTable, firewall: FirewallState, options: &Options) -
     let mut out: Vec<String> = Vec::new();
 
     out.push(heading(theme, "listening", options.edge));
-    let widths = widths(&table.sockets, theme, options.resolve);
+    let widths = widths(&table.sockets, theme, options);
 
     for (exposure, reach) in GROUPS {
         let group: Vec<&SocketEntry> = table
@@ -114,6 +214,10 @@ pub fn render(table: &SocketTable, firewall: FirewallState, options: &Options) -
 
         out.push(String::new());
         out.push(group_header(theme, reach, group.len(), options.edge));
+        // A blank line under the group title, as in `routes`: the column
+        // header is a different kind of row from the one above it, and running
+        // them together is what made this table read as dense.
+        out.push(String::new());
         out.push(column_header(theme, &widths));
         for socket in group {
             out.push(row(theme, socket, &widths, options));
@@ -173,18 +277,17 @@ fn column_header(theme: &Theme, widths: &Widths) -> String {
     line.pad_to(ROW_COL + PROTO_WIDTH);
     line.push(theme, Role::Dim, "address");
     line.pad_to(ROW_COL + PROTO_WIDTH + widths.address);
-    line.push(theme, Role::Dim, "process");
-    line.push_right(
-        theme,
-        Role::Dim,
-        "pid",
-        ROW_COL + PROTO_WIDTH + widths.address + widths.process + widths.pid - 1,
-    );
+    line.push(theme, Role::Dim, "owner");
+    line.push_right(theme, Role::Dim, "pid", pid_end(widths));
     line.finish()
 }
 
+/// The pid column ends the row, and every row ends in the same place.
+fn pid_end(widths: &Widths) -> usize {
+    ROW_COL + PROTO_WIDTH + widths.address + widths.owner + widths.detail + widths.pid - 1
+}
+
 fn row(theme: &Theme, socket: &SocketEntry, widths: &Widths, options: &Options) -> String {
-    let current_uid = options.current_uid;
     let mut line = Line::new();
     line.pad_to(RAIL_COL);
     line.push(theme, Role::Rule, theme.glyphs.rail_body);
@@ -211,26 +314,53 @@ fn row(theme: &Theme, socket: &SocketEntry, widths: &Widths, options: &Options) 
     }
 
     line.pad_to(ROW_COL + PROTO_WIDTH + widths.address);
-    let pid_end = ROW_COL + PROTO_WIDTH + widths.address + widths.process + widths.pid - 1;
+    owner(&mut line, theme, socket);
+
+    let detail = detail_text(socket, options);
+    if !detail.is_empty() {
+        line.pad_to(ROW_COL + PROTO_WIDTH + widths.address + widths.owner);
+        line.push(theme, Role::Faint, &detail);
+    }
+
     match &socket.process {
         Some(process) => {
-            line.push(theme, Role::Body, &process.name);
-            line.push_right(theme, Role::Faint, &process.pid.to_string(), pid_end);
-            // Only when it is somebody else's.
-            if current_uid.is_none_or(|uid| uid != process.uid) {
-                let owner = process
-                    .user
-                    .clone()
-                    .unwrap_or_else(|| process.uid.to_string());
-                line.push(theme, Role::Faint, &format!(" {}{owner}", theme.glyphs.sep));
-            }
+            line.push_right(
+                theme,
+                Role::Faint,
+                &process.pid.to_string(),
+                pid_end(widths),
+            );
         }
         None => {
-            line.push(theme, Role::Faint, theme.glyphs.unknown);
-            line.push_right(theme, Role::Faint, theme.glyphs.unknown, pid_end);
+            line.push_right(theme, Role::Faint, theme.glyphs.unknown, pid_end(widths));
         }
     }
     line.finish()
+}
+
+/// The owner column, written out with its parts coloured separately.
+///
+/// The mark carries no hue of its own: the shape says what kind of owner this
+/// is, and the row already says in colour how far away the port can be reached
+/// from. Giving the mark a hue too would be the same fact told twice, in a
+/// column where a second signal only competes with the first.
+fn owner(line: &mut Line, theme: &Theme, socket: &SocketEntry) {
+    let mark = owner_mark(socket, theme);
+    if mark.is_empty() {
+        line.space(mark_width(theme));
+    } else {
+        line.push(theme, Role::Faint, mark);
+        line.space(mark_width(theme) - mark.chars().count());
+    }
+    let name = owner_name(socket, theme);
+    // A named container is the answer to the question; an unnamed owner is the
+    // absence of one, and they must not look alike.
+    let role = match (&socket.container, &socket.process) {
+        (Some(container), _) if container.name.is_some() => Role::Bright,
+        (_, Some(_)) => Role::Body,
+        (_, None) => Role::Faint,
+    };
+    line.push(theme, role, &name);
 }
 
 fn protocol(socket: &SocketEntry) -> &'static str {
@@ -312,6 +442,10 @@ fn footer(out: &mut Vec<String>, table: &SocketTable, firewall: FirewallState, o
 
     let mut line = Line::new();
     line.pad_to(RAIL_COL);
+    if !theme.glyphs.shield.is_empty() {
+        line.push(theme, Role::Dim, theme.glyphs.shield);
+        line.space(1);
+    }
     line.push(theme, Role::Dim, "application firewall");
     line.space(2);
     line.push(theme, role, state);
@@ -381,6 +515,7 @@ mod tests {
         process: Option<(&str, i32, u32)>,
     ) -> SocketEntry {
         SocketEntry {
+            container: None,
             protocol: Protocol::Tcp,
             family: if address.contains(':') {
                 Family::Inet6
@@ -400,6 +535,7 @@ mod tests {
                 } else {
                     "maya".to_owned()
                 }),
+                path: None,
             }),
         }
     }
@@ -609,11 +745,14 @@ mod tests {
 
         // The name lives in the address column, so it must be measured with
         // it — otherwise it runs straight into the process name.
-        let header = resolved.lines().find(|l| l.contains("process")).unwrap();
-        let column = header.find("process").unwrap();
-        for line in resolved.lines().filter(|l| l.contains("postgres ")) {
-            let at = line.find("postgres ").unwrap();
-            assert_eq!(at, column, "the process column moved: {line:?}");
+        // The owner column starts at its mark, not at the name: the mark is
+        // what keeps every row's name in one place.
+        let header = resolved.lines().find(|l| l.contains("owner")).unwrap();
+        let column = header.find("owner").unwrap();
+        let mark = Theme::plain().glyphs.process;
+        for line in resolved.lines().filter(|l| l.contains("postgres")) {
+            let at = line.find(mark).unwrap();
+            assert_eq!(at, column, "the owner column moved: {line:?}");
         }
     }
 

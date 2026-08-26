@@ -17,6 +17,7 @@ pub fn install_crypto_provider() {
 }
 
 pub mod cli;
+pub mod container;
 pub mod model;
 pub mod parse;
 pub mod probe;

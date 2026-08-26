@@ -375,6 +375,29 @@ pub struct SocketEntry {
     /// `None` when ownership could not be determined. This must never be
     /// conflated with "no process".
     pub process: Option<ProcessInfo>,
+    /// Set when this port belongs to a container rather than to the process
+    /// that happens to hold the socket. On macOS the container never opens a
+    /// host socket itself — the runtime forwards the port — so without this the
+    /// owner column names a helper nobody started on purpose.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub container: Option<ContainerRef>,
+}
+
+/// A published container port, as the runtime describes it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ContainerRef {
+    /// Which runtime answered, or whose forwarder was recognised.
+    pub runtime: String,
+    /// `None` when the runtime could not be asked and only its port forwarder
+    /// was recognised: the port is a container's, but which one is unknown.
+    /// Saying "a container" is honest; inventing a name is not.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<String>,
+    /// The port inside the container, which is often not the published one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub private_port: Option<u16>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -398,6 +421,11 @@ pub struct ProcessInfo {
     pub pid: i32,
     pub uid: u32,
     pub user: Option<String>,
+    /// The executable's full path. Carries more than the name does: a binary
+    /// called `docker` in someone's home directory is not a container runtime,
+    /// and the path is what tells the two apart.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
 }
 
 /// The `listen` subcommand's own top-level object, sharing the report's
