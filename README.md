@@ -82,6 +82,14 @@ bespoke ones. With `--no-color` it survives as structure: status words go in
 brackets, runnable lines take a `$` prefix, and separators appear where colour
 was doing the separating.
 
+Glyphs come in three sets: `--icons unicode` (the default on a UTF-8 locale),
+`--icons ascii`, and `--icons nerd`. Nerd is never chosen automatically,
+because a terminal does not report its font — there is no escape sequence for
+it, and guessing wrong fills the report with empty boxes. Say so once in your
+shell profile with `NETINSPECT_ICONS=nerd`. Its marks come only from the Font
+Awesome block Nerd Fonts has patched in at `U+F000`–`U+F2E0` since the
+beginning, so an older font shows them too.
+
 The report follows the terminal between 62 and 96 columns, spending the extra
 width on structure rather than padding: rows that had to stack stop stacking,
 and short sections pair up. Below 66 columns it stacks; below 40 it drops the
@@ -115,16 +123,29 @@ $ netinspect listen
   listening ─────────────────────────────────────────────────
 
   ▌  reachable from the network                     15 sockets
-  │  proto  address        process            pid
-  │  tcp    0.0.0.0:22     —                    —
-  │  tcp    [::]:5000      ControlCenter     91892
+
+  │  proto  address         owner                          pid
+  │  tcp    0.0.0.0:22        —                              —
+  │  tcp    0.0.0.0:3000    ▣ snow-logger   nginx:alpine  87092
+  │  tcp    [::]:5000       ◇ ControlCenter                91892
 
   ▌  this machine only                              12 sockets
-  │  tcp    127.0.0.1:6379 redis-server       4021
+
+  │  tcp    127.0.0.1:6379  ◇ redis-server                  4021
 
   ────────────────────────────────────────────────────────────
   25 sockets owned by other users · sudo netinspect listen
 ```
+
+On macOS a container never opens a socket on the host: the runtime forwards
+each published port through a helper process, so without help this table names
+`OrbStack Helper` where you wanted `snow-logger`. netinspect asks whichever
+container runtime is listening on a unix socket — Docker, OrbStack, Colima,
+Rancher, Podman — and names the container that published the port, with its
+image beside it. Failing that, recognising the forwarder by its executable path
+still establishes *that* a container owns the port, without inventing a name
+for it. `--no-containers` skips the question entirely; a `tcp://` `DOCKER_HOST`
+is never followed, because it can be another machine.
 
 Sockets come from `pcblist_n`, which lists **every** socket on the machine
 without any privileges, and process names are added from `libproc`, which can

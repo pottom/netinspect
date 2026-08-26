@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 
 use std::time::Duration;
 
-use crate::render::theme::{ColorMode, Palette, Theme, ASCII, UNICODE};
+use crate::render::theme::{ColorMode, Icons, Palette, Theme};
 
 const GEO_PROVIDER_NOTE: &str = "\
 The public-address lookup sends this machine's IP to ipinfo.io
@@ -66,9 +66,15 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub no_color: bool,
 
-    /// Use the ASCII fallback glyph set
-    #[arg(long, global = true)]
+    /// Use the ASCII fallback glyph set. Shorthand for --icons ascii
+    #[arg(long, global = true, conflicts_with = "icons")]
     pub ascii: bool,
+
+    /// Glyph set. Nerd is never detected automatically, because a terminal
+    /// does not report its font — ask for it explicitly
+    #[arg(long, global = true, value_name = "SET",
+          value_parser = ["auto", "nerd", "unicode", "ascii"])]
+    pub icons: Option<String>,
 
     /// Palette to render with. Detected from the terminal background by default
     #[arg(long, global = true, value_name = "PALETTE",
@@ -129,6 +135,9 @@ pub enum Command {
         /// Annotate well-known ports with their service name
         #[arg(long)]
         resolve: bool,
+        /// Do not ask the container runtime which container published a port
+        #[arg(long)]
+        no_containers: bool,
     },
 
     /// Print the routing table
@@ -201,12 +210,26 @@ impl Cli {
         Theme {
             color,
             palette: self.palette(color),
-            glyphs: if self.ascii || !terminal_is_utf8() {
-                ASCII
-            } else {
-                UNICODE
-            },
+            glyphs: self.icons().glyphs(terminal_is_utf8()),
         }
+    }
+
+    /// The flag beats the environment, which beats the default.
+    fn icons(&self) -> Icons {
+        if self.ascii {
+            return Icons::Ascii;
+        }
+        if let Some(icons) = self.icons.as_deref().and_then(Icons::parse) {
+            return icons;
+        }
+        // A shell profile is where a Nerd Font user says so once rather than
+        // on every invocation. An unparseable value falls through to the
+        // default rather than failing the run.
+        std::env::var("NETINSPECT_ICONS")
+            .ok()
+            .as_deref()
+            .and_then(Icons::parse)
+            .unwrap_or(Icons::Auto)
     }
 
     fn color_mode(&self) -> ColorMode {

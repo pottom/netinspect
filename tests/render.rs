@@ -705,27 +705,53 @@ fn addresses_are_coloured_by_reach_alone() {
     );
 }
 
-/// The signal bars are a measurement, not a status. Green is reserved for a
-/// probe that answered.
+/// The meter is coloured by strength — the one deliberate exception to the rule
+/// that hue encodes reach. What must not drift is the mapping: green only for a
+/// genuinely strong radio, red for one that is not, and the unlit remainder in
+/// `rule` at every level so the baseline never masquerades as a reading.
 #[test]
-fn signal_bars_are_never_green() {
+fn the_meter_is_coloured_by_strength() {
+    const OK: &str = "\x1b[38;2;140;201;111m";
+    const PUBLIC: &str = "\x1b[38;2;235;171;69m";
+    const FAIL: &str = "\x1b[38;2;242;112;95m";
+    const RULE: &str = "\x1b[38;2;42;43;48m";
+
+    for (rssi, role, lit, unlit) in [
+        (-45, OK, "\u{28e0}\u{28fe}\u{2847}", ""),
+        (-55, OK, "\u{28e0}\u{28fe}", "\u{2840}"),
+        (-63, PUBLIC, "\u{28e0}\u{28c6}", "\u{2840}"),
+        (-70, FAIL, "\u{28e0}", "\u{28c0}\u{2840}"),
+        (-82, FAIL, "\u{28c0}", "\u{28c0}\u{2840}"),
+    ] {
+        let rendered = coloured_at(rssi);
+        assert!(
+            rendered.contains(&format!("{role}{lit}\x1b[0m")),
+            "at {rssi} dBm the lit part carries the role its strength earns"
+        );
+        // At full strength there is no remainder, so there is no rule run to
+        // find — asserting one would be asserting a bug.
+        assert!(
+            unlit.is_empty() || rendered.contains(&format!("{RULE}{unlit}\x1b[0m")),
+            "at {rssi} dBm the unlit remainder stays rule"
+        );
+    }
+}
+
+/// The full report at a chosen signal strength, in truecolor.
+fn coloured_at(rssi_dbm: i32) -> String {
+    let mut snapshot = full();
+    for interface in &mut snapshot.interfaces {
+        if let Some(wifi) = interface.wifi.as_mut() {
+            wifi.rssi_dbm = Some(rssi_dbm);
+        }
+    }
     let mut coloured = options(80);
     coloured.theme = Theme {
         color: ColorMode::TrueColor,
         palette: Palette::Dark,
         glyphs: UNICODE,
     };
-    let rendered = human::render(&full(), &coloured);
-    let ok = "\x1b[38;2;140;201;111m";
-    let bright = "\x1b[38;2;242;240;233m";
-    assert!(
-        rendered.contains(&format!("{bright}▇▇▇▇▇")),
-        "bars are bright"
-    );
-    assert!(
-        !rendered.contains(&format!("{ok}▇")),
-        "bars must not be ok-green"
-    );
+    human::render(&snapshot, &coloured)
 }
 
 /// Absent optional data is omitted, never printed as "unknown".

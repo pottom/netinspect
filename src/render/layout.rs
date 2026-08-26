@@ -191,8 +191,21 @@ pub fn rule(theme: &Theme, edge: usize) -> String {
 
 /// A section title: uppercase, in `dim`, with no rule under it.
 pub fn section(theme: &Theme, title: &str) -> String {
+    marked_section(theme, "", title)
+}
+
+/// A section title with a leading mark.
+///
+/// The mark is empty in every glyph set but Nerd, and an empty mark takes no
+/// space at all — so the report is byte-for-byte what it was for everyone who
+/// has not asked for icons.
+pub fn marked_section(theme: &Theme, icon: &str, title: &str) -> String {
     let mut line = Line::new();
     line.pad_to(RAIL_COL);
+    if !icon.is_empty() {
+        line.push(theme, Role::Dim, icon);
+        line.space(1);
+    }
     line.push(theme, Role::Dim, &title.to_uppercase());
     line.finish()
 }

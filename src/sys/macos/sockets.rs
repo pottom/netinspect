@@ -130,6 +130,11 @@ fn owners() -> HashMap<u64, ProcessInfo> {
             continue;
         };
         let name = proc_pid::name(pid).unwrap_or_default();
+        // The path separates a container runtime's forwarder from a binary
+        // that merely shares its name, so it is worth the extra call. Absent
+        // for processes this user may not inspect, which is fine: the name is
+        // still there.
+        let path = proc_pid::pidpath(pid).ok();
 
         for descriptor in descriptors {
             if !matches!(ProcFDType::from(descriptor.proc_fdtype), ProcFDType::Socket) {
@@ -152,6 +157,7 @@ fn owners() -> HashMap<u64, ProcessInfo> {
                     pid,
                     uid: 0,
                     user: None,
+                    path: path.clone(),
                 });
         }
     }
@@ -178,8 +184,11 @@ pub fn join(raw: Vec<Raw>, owners: &HashMap<u64, ProcessInfo>) -> SocketTable {
                 pid: owner.pid,
                 uid: entry.socket.uid.unwrap_or(owner.uid),
                 user: user_name(entry.socket.uid.unwrap_or(owner.uid)),
+                path: owner.path.clone(),
             });
             SocketEntry {
+                // Filled in later, by whichever container runtime claims it.
+                container: None,
                 protocol: entry.protocol,
                 family: match entry.socket.local {
                     IpAddr::V4(_) => Family::Inet,
@@ -326,6 +335,7 @@ mod tests {
                 pid: 1284,
                 uid: 0,
                 user: None,
+                path: None,
             },
         );
 

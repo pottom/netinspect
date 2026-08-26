@@ -13,8 +13,8 @@ use crate::model::{
 };
 
 use super::layout::{
-    columns, content_edge, rule, section, visible_width, Line, GUTTER, LABEL_COL, NARROW_BELOW,
-    RAIL_BELOW, RAIL_COL, VALUE_COL,
+    columns, content_edge, marked_section, rule, visible_width, Line, GUTTER, LABEL_COL,
+    NARROW_BELOW, RAIL_BELOW, RAIL_COL, VALUE_COL,
 };
 use super::reach::{self, Reach};
 use super::theme::{Role, Theme};
@@ -242,6 +242,15 @@ fn interface_block(out: &mut Vec<String>, iface: &Interface, options: &Options) 
     };
     push_rail(&mut head, options, head_rail);
 
+    // Empty in every set but Nerd, and then this costs nothing and changes
+    // nothing — which is what keeps one glyph set from reshaping the report
+    // for everybody else.
+    let icon = kind_icon(iface.kind, theme);
+    if !icon.is_empty() {
+        head.push(theme, Role::Faint, icon);
+        head.space(1);
+    }
+
     let name_role = if active { Role::Bright } else { Role::Faint };
     let bsd_role = Role::Faint;
     if let Some(display_name) = header_name(iface) {
@@ -393,20 +402,16 @@ fn network_row(wifi: &WifiDetail, options: &Options) -> Row {
 
     let mut row = Row::new("network", value);
 
-    // Signal strength is a measurement, not a status: the bars are bright and
-    // the empty cells are rule. Never green.
+    // The meter is coloured by strength. This is a deliberate exception to the
+    // rule that hue encodes reach and nothing else — see the note in
+    // DESIGN.md §5, which records both the decision and what it costs.
     let signal: Vec<(Role, String)> = match wifi.rssi_dbm {
         Some(rssi) => {
-            let bars = signal_bars(rssi);
+            let level = signal_bars(rssi) as usize;
+            let (lit, unlit) = theme.glyphs.meter[level];
             vec![
-                (Role::Bright, theme.glyphs.bar_full.repeat(bars as usize)),
-                (
-                    Role::Rule,
-                    theme
-                        .glyphs
-                        .bar_empty
-                        .repeat(5usize.saturating_sub(bars as usize)),
-                ),
+                (meter_role(level), lit.to_owned()),
+                (Role::Rule, unlit.to_owned()),
                 (
                     Role::Faint,
                     format!(" {}{} dBm", theme.glyphs.minus, rssi.abs()),
@@ -603,6 +608,18 @@ fn push_rail(line: &mut Line, options: &Options, rail: Rail) {
     line.pad_to(LABEL_COL);
 }
 
+/// The mark for an interface kind. Empty outside the Nerd set, where there is
+/// no glyph that means "Wi-Fi" without also meaning something else.
+fn kind_icon(kind: InterfaceKind, theme: &Theme) -> &'static str {
+    match kind {
+        InterfaceKind::Wifi => theme.glyphs.wifi,
+        InterfaceKind::Ethernet | InterfaceKind::Bridge => theme.glyphs.ethernet,
+        InterfaceKind::Vpn => theme.glyphs.tunnel,
+        InterfaceKind::Loopback => theme.glyphs.loopback,
+        InterfaceKind::Other => "",
+    }
+}
+
 /// The name to print before the device name. Prefers the configured service
 /// name; for an active interface with none, the kind still says something
 /// useful ("VPN utun4"). An inactive unnamed interface gets nothing, because
@@ -649,6 +666,20 @@ fn source_note(source: AddressSource, iface: &Interface) -> Option<String> {
         AddressSource::Dhcp => Some("dhcp".to_owned()),
         AddressSource::Linklocal => Some("link-local".to_owned()),
         AddressSource::Manual => None,
+    }
+}
+
+/// What the lit part of the meter is coloured with.
+///
+/// Reusing `ok`, `public` and `fail` rather than adding a fourth ramp: every
+/// hue in the palette is already spoken for, so a new one would collide with
+/// something anyway. The cost is stated in DESIGN.md §5.
+fn meter_role(level: usize) -> Role {
+    match level {
+        0 => Role::Rule,
+        1 | 2 => Role::Fail,
+        3 => Role::Public,
+        _ => Role::Ok,
     }
 }
 
@@ -820,7 +851,7 @@ fn public_section(
             line.push(theme, Role::Faint, age);
             out.push(line.finish());
         }
-        None => out.push(section(theme, "public address")),
+        None => out.push(marked_section(theme, theme.glyphs.globe, "public address")),
     }
 
     for (label, address) in [("ipv4", &public.ipv4), ("ipv6", &public.ipv6)] {
@@ -942,7 +973,7 @@ fn rungs(report: &Reachability) -> [Rung; 4] {
 fn reachability_section(out: &mut Vec<String>, report: &Reachability, options: &Options) {
     let theme = &options.theme;
     out.push(String::new());
-    out.push(section(theme, "reachability"));
+    out.push(marked_section(theme, theme.glyphs.link, "reachability"));
 
     if options.narrow() {
         narrow_ladder(out, report, options);
@@ -1098,7 +1129,7 @@ fn explanation(report: &Reachability) -> &'static str {
 fn dns_section(out: &mut Vec<String>, dns: &DnsConfig, options: &Options) {
     let theme = &options.theme;
     out.push(String::new());
-    out.push(section(theme, "dns"));
+    out.push(marked_section(theme, theme.glyphs.dns, "dns"));
 
     let mut servers: Vec<(Role, String)> = Vec::new();
     for (index, server) in dns.servers.iter().enumerate() {

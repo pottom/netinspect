@@ -73,6 +73,7 @@ fn run() -> Result<ExitCode> {
         exposed,
         port,
         resolve,
+        no_containers,
     }) = &cli.command
     {
         return listen(
@@ -84,6 +85,7 @@ fn run() -> Result<ExitCode> {
                 exposed: *exposed,
                 port: *port,
                 resolve: *resolve,
+                no_containers: *no_containers,
             },
         );
     }
@@ -369,6 +371,7 @@ struct ListenOptions {
     exposed: bool,
     port: Option<u16>,
     resolve: bool,
+    no_containers: bool,
 }
 
 fn listen(cli: &Cli, platform: &dyn sys::Platform, options: ListenOptions) -> Result<ExitCode> {
@@ -399,6 +402,12 @@ fn listen(cli: &Cli, platform: &dyn sys::Platform, options: ListenOptions) -> Re
         interface: count(Exposure::Interface),
         unattributed: table.sockets.iter().filter(|s| s.process.is_none()).count(),
     };
+
+    // After the filter, so a `--port` run asks about one port's worth of
+    // sockets rather than the whole table.
+    if !options.no_containers {
+        netinspect::container::annotate(&mut table.sockets);
+    }
 
     let firewall = platform.firewall()?;
 
